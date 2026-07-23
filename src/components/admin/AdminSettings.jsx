@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { UserCheck, Trash2, Plus, Shield, Users, Printer, Save, Lock, Upload, FileDown, Edit, X, CheckSquare, Clock } from 'lucide-react';
+import { UserCheck, Trash2, Plus, Shield, Users, Printer, Save, Lock, Upload, FileDown, Edit, X, CheckSquare, Clock, MapPin, Crosshair, Smartphone, Globe } from 'lucide-react';
 import { updateDoc, doc, addDoc, writeBatch, deleteDoc } from 'firebase/firestore';
 import { db, getCollectionPath } from '../../lib/firebase';
 import { formatDateIndo, DEFAULT_LOGO_URL } from '../../utils/helpers';
-import * as XLSX from 'xlsx'; 
+import { getCurrentPosition } from '../../lib/geolocation';
+import GeoLocationMap from './GeoLocationMap';
+import * as XLSX from 'xlsx';
 
 // ============================================================================
 // 1. MAIN COMPONENT: ADMIN SETTINGS (CONTAINER)
@@ -24,6 +26,8 @@ export default function AdminSettings({ settings, holidays, employees, user }) {
        <div className="flex border-b mb-6 print:hidden overflow-x-auto">
           <TabButton id="setup" label="Instansi & Aplikasi" activeTab={activeTab} onClick={setActiveTab} />
           <TabButton id="waktu" label="Waktu Absensi" activeTab={activeTab} onClick={setActiveTab} />
+          <TabButton id="geo" label="Geo Lokasi" activeTab={activeTab} onClick={setActiveTab} />
+          <TabButton id="mode_app" label="Mode Aplikasi" activeTab={activeTab} onClick={setActiveTab} />
           <TabButton id="hari_libur" label="Hari Libur" activeTab={activeTab} onClick={setActiveTab} />
           <TabButton id="user" label="Manajemen User" activeTab={activeTab} onClick={setActiveTab} />
        </div>
@@ -38,6 +42,14 @@ export default function AdminSettings({ settings, holidays, employees, user }) {
              <TabTimeSettings settings={settings} isReadOnly={isReadOnly} />
           )}
           
+          {activeTab === 'geo' && (
+             <TabGeoLocation settings={settings} isReadOnly={isReadOnly} />
+          )}
+
+          {activeTab === 'mode_app' && (
+             <TabModeAplikasi settings={settings} isReadOnly={isReadOnly} />
+          )}
+
           {activeTab === 'hari_libur' && (
              <TabHolidays holidays={holidays} isReadOnly={isReadOnly} />
           )}
@@ -176,6 +188,8 @@ function TabTimeSettings({ settings, isReadOnly }) {
     const [form, setForm] = useState({
         jamMasukAwal: settings.jamMasukAwal || '06:00',
         batasAbsenPagi: settings.batasAbsenPagi || '10:00',
+        jamSiangAwal: settings.jamSiangAwal || '13:00',
+        batasAbsenSiang: settings.batasAbsenSiang || '14:00',
         jamPulangAwal: settings.jamPulangAwal || '16:00',
         batasAbsenSore: settings.batasAbsenSore || '18:00',
         zonaWaktu: settings.zonaWaktu || 'Auto', // Tambah state Zona Waktu
@@ -185,6 +199,8 @@ function TabTimeSettings({ settings, isReadOnly }) {
         setForm({
             jamMasukAwal: settings.jamMasukAwal || '06:00',
             batasAbsenPagi: settings.batasAbsenPagi || '10:00',
+            jamSiangAwal: settings.jamSiangAwal || '13:00',
+            batasAbsenSiang: settings.batasAbsenSiang || '14:00',
             jamPulangAwal: settings.jamPulangAwal || '16:00',
             batasAbsenSore: settings.batasAbsenSore || '18:00',
             zonaWaktu: settings.zonaWaktu || 'Auto',
@@ -232,34 +248,65 @@ function TabTimeSettings({ settings, isReadOnly }) {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 {/* SESI PAGI */}
                 <div className="border p-5 rounded-lg bg-slate-50 shadow-sm">
                     <h3 className="font-bold text-slate-800 border-b pb-2 mb-4 flex items-center">
                         <span className="w-2 h-6 bg-yellow-500 mr-2 rounded"></span>
-                        Sesi Pagi (Masuk)
+                        Sesi Pagi (Check In)
                     </h3>
                     <div className="space-y-4">
                         <div>
                             <label className="font-bold text-xs uppercase block mb-1 text-slate-500">Jam Mulai (Buka Absen)</label>
-                            <input 
-                                type="time" 
+                            <input
+                                type="time"
                                 disabled={isReadOnly}
                                 className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 font-mono"
-                                value={form.jamMasukAwal} 
+                                value={form.jamMasukAwal}
                                 onChange={e=>setForm({...form, jamMasukAwal: e.target.value})}
                             />
                         </div>
                         <div>
                             <label className="font-bold text-xs uppercase block mb-1 text-slate-500">Batas Akhir (Tutup Absen)</label>
-                            <input 
-                                type="time" 
+                            <input
+                                type="time"
                                 disabled={isReadOnly}
                                 className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 font-mono"
-                                value={form.batasAbsenPagi} 
+                                value={form.batasAbsenPagi}
                                 onChange={e=>setForm({...form, batasAbsenPagi: e.target.value})}
                             />
                             <p className="text-[10px] text-gray-500 mt-1">Setelah jam ini, tombol absen pagi hilang.</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* SESI SIANG (DAY IN) */}
+                <div className="border p-5 rounded-lg bg-slate-50 shadow-sm">
+                    <h3 className="font-bold text-slate-800 border-b pb-2 mb-4 flex items-center">
+                        <span className="w-2 h-6 bg-orange-500 mr-2 rounded"></span>
+                        Sesi Siang (Day In)
+                    </h3>
+                    <div className="space-y-4">
+                        <div>
+                            <label className="font-bold text-xs uppercase block mb-1 text-slate-500">Jam Mulai (Buka Absen)</label>
+                            <input
+                                type="time"
+                                disabled={isReadOnly}
+                                className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 font-mono"
+                                value={form.jamSiangAwal}
+                                onChange={e=>setForm({...form, jamSiangAwal: e.target.value})}
+                            />
+                        </div>
+                        <div>
+                            <label className="font-bold text-xs uppercase block mb-1 text-slate-500">Batas Akhir (Tutup Absen)</label>
+                            <input
+                                type="time"
+                                disabled={isReadOnly}
+                                className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 font-mono"
+                                value={form.batasAbsenSiang}
+                                onChange={e=>setForm({...form, batasAbsenSiang: e.target.value})}
+                            />
+                            <p className="text-[10px] text-gray-500 mt-1">Setelah jam ini, tombol absen siang hilang.</p>
                         </div>
                     </div>
                 </div>
@@ -268,26 +315,26 @@ function TabTimeSettings({ settings, isReadOnly }) {
                 <div className="border p-5 rounded-lg bg-slate-50 shadow-sm">
                     <h3 className="font-bold text-slate-800 border-b pb-2 mb-4 flex items-center">
                         <span className="w-2 h-6 bg-blue-500 mr-2 rounded"></span>
-                        Sesi Sore (Pulang)
+                        Sesi Sore (Check Out)
                     </h3>
                     <div className="space-y-4">
                         <div>
                             <label className="font-bold text-xs uppercase block mb-1 text-slate-500">Jam Mulai (Buka Absen)</label>
-                            <input 
-                                type="time" 
+                            <input
+                                type="time"
                                 disabled={isReadOnly}
                                 className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 font-mono"
-                                value={form.jamPulangAwal} 
+                                value={form.jamPulangAwal}
                                 onChange={e=>setForm({...form, jamPulangAwal: e.target.value})}
                             />
                         </div>
                         <div>
                             <label className="font-bold text-xs uppercase block mb-1 text-slate-500">Batas Akhir (Tutup Absen)</label>
-                            <input 
-                                type="time" 
+                            <input
+                                type="time"
                                 disabled={isReadOnly}
                                 className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 font-mono"
-                                value={form.batasAbsenSore} 
+                                value={form.batasAbsenSore}
                                 onChange={e=>setForm({...form, batasAbsenSore: e.target.value})}
                             />
                             <p className="text-[10px] text-gray-500 mt-1">Setelah jam ini, tombol absen sore hilang.</p>
@@ -300,6 +347,293 @@ function TabTimeSettings({ settings, isReadOnly }) {
                 <div className="pt-4 border-t">
                     <button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg shadow-lg font-bold flex items-center">
                         <Save size={18} className="mr-2"/> Simpan Pengaturan
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+}
+
+
+// ============================================================================
+// 3B. SUB-COMPONENT: TAB GEO LOKASI (Geofencing Absensi)
+// ============================================================================
+function TabGeoLocation({ settings, isReadOnly }) {
+    // CATATAN: state diinisialisasi HANYA sekali saat tab ini mount (bukan di-resync
+    // setiap `settings` berubah). Koleksi 'settings' punya listener realtime yang bisa
+    // saja refire kapan saja (reconnect, perubahan tab lain, dsb) — jika kita resync
+    // di setiap perubahan itu, titik lokasi yang baru ditambahkan secara lokal (belum
+    // sempat diklik "Simpan") bisa tertimpa balik oleh data lama sebelum sempat tersimpan.
+    const [geoFenceEnabled, setGeoFenceEnabled] = useState(settings.geoFenceEnabled ?? false);
+    const [locations, setLocations] = useState(settings.geoLocations || []);
+    const [form, setForm] = useState({ id: null, name: '', lat: '', lng: '', radius: 100 });
+    const [gettingLocation, setGettingLocation] = useState(false);
+
+    const resetForm = () => setForm({ id: null, name: '', lat: '', lng: '', radius: 100 });
+
+    const handlePickNew = (lat, lng) => {
+        if (isReadOnly) return;
+        setForm(f => ({ ...f, lat, lng }));
+    };
+
+    const handleDraftMove = (lat, lng) => {
+        setForm(f => ({ ...f, lat, lng }));
+    };
+
+    const handleUseCurrentLocation = async () => {
+        if (isReadOnly) return;
+        setGettingLocation(true);
+        try {
+            const pos = await getCurrentPosition();
+            setForm(f => ({ ...f, lat: pos.lat, lng: pos.lng }));
+        } catch (e) {
+            console.error(e);
+            alert('Gagal mendapatkan lokasi saat ini. Pastikan izin GPS diaktifkan.');
+        } finally {
+            setGettingLocation(false);
+        }
+    };
+
+    const handleEditLocation = (loc) => {
+        setForm({ id: loc.id, name: loc.name, lat: loc.lat, lng: loc.lng, radius: loc.radius });
+    };
+
+    const handleSaveLocation = () => {
+        if (isReadOnly) return;
+        if (!form.name || form.lat === '' || form.lng === '' || form.lat == null || form.lng == null || !form.radius) {
+            alert('Lengkapi nama, titik lokasi (klik peta), dan radius.');
+            return;
+        }
+        const cleaned = { id: form.id || Date.now().toString(), name: form.name, lat: Number(form.lat), lng: Number(form.lng), radius: Number(form.radius) };
+        const updated = form.id
+            ? locations.map(l => l.id === form.id ? cleaned : l)
+            : [...locations, cleaned];
+        setLocations(updated);
+        resetForm();
+    };
+
+    const handleDeleteLocation = (id) => {
+        if (isReadOnly) return;
+        if (!confirm('Hapus titik lokasi ini?')) return;
+        setLocations(locations.filter(l => l.id !== id));
+        if (form.id === id) resetForm();
+    };
+
+    const handleSaveAll = async () => {
+        if (isReadOnly) return;
+        if (!settings.id) {
+            alert('Data pengaturan belum termuat sepenuhnya, coba lagi sesaat lagi.');
+            return;
+        }
+        try {
+            await updateDoc(doc(getCollectionPath('settings'), settings.id), { geoFenceEnabled, geoLocations: locations });
+            alert('Pengaturan Geo Lokasi berhasil disimpan.');
+        } catch (error) {
+            console.error(error);
+            alert('Gagal menyimpan pengaturan geo lokasi.');
+        }
+    };
+
+    const hasDraft = form.lat !== '' && form.lng !== '' && form.lat != null && form.lng != null;
+    const mapCenter = hasDraft
+        ? [Number(form.lat), Number(form.lng)]
+        : locations.length > 0 ? [locations[0].lat, locations[0].lng] : [-2.5, 118];
+    const mapZoom = hasDraft ? 16 : locations.length > 0 ? 15 : 5;
+
+    return (
+        <div className="max-w-5xl space-y-6 animate-in fade-in duration-300">
+            <div className="bg-blue-50 border-l-4 border-blue-500 p-4 text-sm text-blue-700">
+                <p className="font-bold flex items-center"><MapPin className="mr-2" size={16}/> Panduan Geo Lokasi Absensi</p>
+                <p className="mt-1">Klik pada peta untuk menentukan titik lokasi, atur radius, lalu simpan. Pegawai hanya bisa melakukan absensi jika berada di dalam radius salah satu titik yang terdaftar.</p>
+            </div>
+
+            {/* TOGGLE AKTIF/NONAKTIF */}
+            <div className="flex items-center justify-between border p-4 rounded-lg bg-white shadow-sm">
+                <div>
+                    <h3 className="font-bold text-slate-800">Validasi Geo Lokasi</h3>
+                    <p className="text-xs text-slate-500 mt-1">Jika nonaktif, pegawai dapat absen dari lokasi manapun tanpa validasi jarak.</p>
+                </div>
+                <label className={`relative inline-flex items-center ${isReadOnly ? 'opacity-50 pointer-events-none' : 'cursor-pointer'}`}>
+                    <input type="checkbox" className="sr-only peer" checked={geoFenceEnabled} onChange={e=>setGeoFenceEnabled(e.target.checked)} disabled={isReadOnly}/>
+                    <div className="w-12 h-7 bg-gray-300 rounded-full peer peer-checked:after:translate-x-5 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-green-500"></div>
+                </label>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                {/* PETA */}
+                <div className="lg:col-span-3">
+                    <GeoLocationMap
+                        locations={locations}
+                        draft={hasDraft ? { lat: Number(form.lat), lng: Number(form.lng), radius: form.radius } : null}
+                        onDraftMove={handleDraftMove}
+                        onPickNew={handlePickNew}
+                        onMarkerClick={!isReadOnly ? handleEditLocation : undefined}
+                        center={mapCenter}
+                        zoom={mapZoom}
+                    />
+                    <p className="text-[11px] text-gray-500 mt-2 italic">* Klik peta untuk titik baru, seret marker biru untuk menyesuaikan posisi, klik marker merah untuk mengedit titik tersimpan.</p>
+                </div>
+
+                {/* FORM TAMBAH/EDIT */}
+                <div className="lg:col-span-2 border p-4 rounded-lg bg-slate-50 shadow-sm space-y-3 h-fit">
+                    <h3 className="font-bold text-slate-800 border-b pb-2">{form.id ? 'Edit Titik Lokasi' : 'Tambah Titik Lokasi'}</h3>
+                    <div>
+                        <label className="font-bold text-xs uppercase block mb-1 text-slate-500">Nama Lokasi</label>
+                        <input disabled={isReadOnly} className="w-full border p-2 rounded disabled:bg-gray-100" placeholder="Misal: Kantor Pusat" value={form.name} onChange={e=>setForm({...form, name: e.target.value})}/>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                        <div>
+                            <label className="font-bold text-xs uppercase block mb-1 text-slate-500">Latitude</label>
+                            <input disabled={isReadOnly} type="number" step="any" className="w-full border p-2 rounded font-mono text-xs disabled:bg-gray-100" value={form.lat} onChange={e=>setForm({...form, lat: e.target.value})}/>
+                        </div>
+                        <div>
+                            <label className="font-bold text-xs uppercase block mb-1 text-slate-500">Longitude</label>
+                            <input disabled={isReadOnly} type="number" step="any" className="w-full border p-2 rounded font-mono text-xs disabled:bg-gray-100" value={form.lng} onChange={e=>setForm({...form, lng: e.target.value})}/>
+                        </div>
+                    </div>
+                    <div>
+                        <label className="font-bold text-xs uppercase block mb-1 text-slate-500">Radius (meter)</label>
+                        <input disabled={isReadOnly} type="number" min="10" step="10" className="w-full border p-2 rounded font-mono disabled:bg-gray-100" value={form.radius} onChange={e=>setForm({...form, radius: e.target.value})}/>
+                    </div>
+
+                    {!isReadOnly && (
+                        <button type="button" onClick={handleUseCurrentLocation} disabled={gettingLocation} className="w-full flex items-center justify-center gap-2 bg-slate-800 text-white py-2 rounded font-bold text-sm hover:bg-black disabled:opacity-50">
+                            <Crosshair size={16}/> {gettingLocation ? 'Mencari Lokasi...' : 'Gunakan Lokasi Saya Saat Ini'}
+                        </button>
+                    )}
+
+                    {!isReadOnly && (
+                        <div className="flex gap-2 pt-2">
+                            <button type="button" onClick={handleSaveLocation} className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded font-bold text-sm flex items-center justify-center gap-1">
+                                <Plus size={16}/> {form.id ? 'Perbarui Titik' : 'Tambah Titik'}
+                            </button>
+                            {form.id && (
+                                <button type="button" onClick={resetForm} className="px-4 bg-gray-400 hover:bg-gray-500 text-white py-2 rounded font-bold text-sm">Batal</button>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* DAFTAR TITIK LOKASI */}
+            <div className="border rounded-lg overflow-hidden shadow-sm">
+                <table className="w-full text-sm">
+                    <thead className="bg-slate-100">
+                        <tr>
+                            <th className="p-3 text-left">Nama Lokasi</th>
+                            <th className="p-3 text-left">Koordinat</th>
+                            <th className="p-3 text-left">Radius</th>
+                            <th className="p-3 text-center w-24">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y">
+                        {locations.length === 0 && <tr><td colSpan={4} className="p-4 text-center italic text-gray-500">Belum ada titik lokasi diatur.</td></tr>}
+                        {locations.map(loc => (
+                            <tr key={loc.id} className="hover:bg-slate-50">
+                                <td className="p-3 font-bold">{loc.name}</td>
+                                <td className="p-3 font-mono text-xs text-slate-600">{Number(loc.lat).toFixed(6)}, {Number(loc.lng).toFixed(6)}</td>
+                                <td className="p-3">{loc.radius} m</td>
+                                <td className="p-3 text-center">
+                                    {!isReadOnly && (
+                                        <div className="flex justify-center gap-1">
+                                            <button onClick={()=>handleEditLocation(loc)} className="text-blue-600 hover:bg-blue-100 p-1.5 rounded border border-blue-200"><Edit size={16}/></button>
+                                            <button onClick={()=>handleDeleteLocation(loc.id)} className="text-red-500 hover:bg-red-100 p-1.5 rounded border border-red-200"><Trash2 size={16}/></button>
+                                        </div>
+                                    )}
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+
+            {!isReadOnly && (
+                <div className="pt-2">
+                    <button onClick={handleSaveAll} className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg shadow-lg font-bold flex items-center">
+                        <Save size={18} className="mr-2"/> Simpan Pengaturan Geo Lokasi
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+}
+
+
+// ============================================================================
+// 3C. SUB-COMPONENT: TAB MODE APLIKASI (Wajib Aplikasi Mobile)
+// ============================================================================
+function TabModeAplikasi({ settings, isReadOnly }) {
+    // State diinisialisasi sekali saat tab dibuka (bukan di-resync setiap `settings`
+    // berubah) — pola yang sama dipakai di TabGeoLocation untuk menghindari toggle
+    // yang baru diubah tertimpa balik oleh snapshot Firestore yang datang di tengah edit.
+    const [mobileOnlyAbsensi, setMobileOnlyAbsensi] = useState(settings.mobileOnlyAbsensi ?? false);
+    const [saving, setSaving] = useState(false);
+
+    const handleSave = async () => {
+        if (isReadOnly) return;
+        if (!settings.id) {
+            alert('Data pengaturan belum termuat sepenuhnya, coba lagi sesaat lagi.');
+            return;
+        }
+        setSaving(true);
+        try {
+            await updateDoc(doc(getCollectionPath('settings'), settings.id), { mobileOnlyAbsensi });
+            alert('Pengaturan Mode Aplikasi berhasil disimpan.');
+        } catch (error) {
+            console.error(error);
+            alert('Gagal menyimpan pengaturan mode aplikasi.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <div className="max-w-3xl space-y-6 animate-in fade-in duration-300">
+            <div className="bg-blue-50 border-l-4 border-blue-500 p-4 text-sm text-blue-700">
+                <p className="font-bold flex items-center"><Smartphone className="mr-2" size={16}/> Panduan Mode Aplikasi</p>
+                <p className="mt-1">Jika "Wajib Aplikasi Mobile" diaktifkan, pegawai TIDAK bisa lagi melakukan absensi lewat browser/web — mereka wajib memakai aplikasi mobile resmi (dibuild dengan Capacitor). Menu lain (rekapan, riwayat, dsb) tetap bisa diakses lewat web seperti biasa.</p>
+            </div>
+
+            <div className="flex items-center justify-between border p-4 rounded-lg bg-white shadow-sm">
+                <div className="flex items-start gap-3">
+                    <div className={`mt-0.5 p-2 rounded-lg ${mobileOnlyAbsensi ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-500'}`}>
+                        <Smartphone size={20}/>
+                    </div>
+                    <div>
+                        <h3 className="font-bold text-slate-800">Wajib Aplikasi Mobile untuk Absensi</h3>
+                        <p className="text-xs text-slate-500 mt-1 max-w-md">
+                            Aktif: pegawai hanya bisa absen dari aplikasi mobile (Capacitor).<br/>
+                            Nonaktif: pegawai bisa absen dari browser/web maupun aplikasi mobile.
+                        </p>
+                    </div>
+                </div>
+                <label className={`relative inline-flex items-center flex-shrink-0 ${isReadOnly ? 'opacity-50 pointer-events-none' : 'cursor-pointer'}`}>
+                    <input type="checkbox" className="sr-only peer" checked={mobileOnlyAbsensi} onChange={e=>setMobileOnlyAbsensi(e.target.checked)} disabled={isReadOnly}/>
+                    <div className="w-12 h-7 bg-gray-300 rounded-full peer peer-checked:after:translate-x-5 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-green-500"></div>
+                </label>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className={`border rounded-lg p-4 flex items-start gap-3 ${!mobileOnlyAbsensi ? 'border-blue-300 bg-blue-50' : 'border-slate-200 bg-slate-50 opacity-60'}`}>
+                    <Globe size={20} className="text-blue-600 mt-0.5 flex-shrink-0"/>
+                    <div>
+                        <p className="font-bold text-sm text-slate-800">Web / Browser</p>
+                        <p className="text-xs text-slate-500 mt-1">{!mobileOnlyAbsensi ? 'Diizinkan untuk absensi.' : 'Diblokir untuk absensi.'}</p>
+                    </div>
+                </div>
+                <div className="border border-green-300 bg-green-50 rounded-lg p-4 flex items-start gap-3">
+                    <Smartphone size={20} className="text-green-600 mt-0.5 flex-shrink-0"/>
+                    <div>
+                        <p className="font-bold text-sm text-slate-800">Aplikasi Mobile</p>
+                        <p className="text-xs text-slate-500 mt-1">Selalu diizinkan untuk absensi.</p>
+                    </div>
+                </div>
+            </div>
+
+            {!isReadOnly && (
+                <div className="pt-2">
+                    <button onClick={handleSave} disabled={saving} className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg shadow-lg font-bold flex items-center disabled:opacity-50">
+                        <Save size={18} className="mr-2"/> {saving ? 'Menyimpan...' : 'Simpan Pengaturan Mode Aplikasi'}
                     </button>
                 </div>
             )}
@@ -596,6 +930,22 @@ function TabUserManagement({ employees, user, settings, isReadOnly }) {
      } catch (e) { alert("Gagal update user."); }
   };
 
+  const deleteSystemUser = async (targetUser) => {
+     if (isReadOnly || user.role !== 'admin') return;
+     if (targetUser.id === user.id) {
+        alert("Tidak bisa menghapus akun Anda sendiri.");
+        return;
+     }
+     if (!confirm(`Hapus akun "${targetUser.nama}" (${targetUser.role})? Tindakan ini tidak dapat dibatalkan.`)) return;
+     try {
+        await deleteDoc(doc(getCollectionPath('users'), targetUser.id));
+        alert("Akun berhasil dihapus.");
+     } catch (e) {
+        console.error(e);
+        alert("Gagal menghapus akun.");
+     }
+  };
+
   const handleAddSystemUser = async (e) => {
       e.preventDefault();
       if(isReadOnly) return;
@@ -665,11 +1015,12 @@ function TabUserManagement({ employees, user, settings, isReadOnly }) {
                              <th className="p-3 text-left">Username</th>
                              <th className="p-3 text-left">Password</th>
                              <th className="p-3 text-center">Simpan</th>
+                             <th className="p-3 text-center">Hapus</th>
                           </tr>
                        </thead>
                        <tbody className="bg-white divide-y">
                           {employees.filter(e => e.role !== 'user').map(u => (
-                             <UserRow key={u.id} targetUser={u} currentUser={user} onSave={updateUserCreds} isReadOnly={isReadOnly} />
+                             <UserRow key={u.id} targetUser={u} currentUser={user} onSave={updateUserCreds} onDelete={deleteSystemUser} isReadOnly={isReadOnly} />
                           ))}
                        </tbody>
                     </table>
@@ -752,7 +1103,7 @@ function TabUserManagement({ employees, user, settings, isReadOnly }) {
 // ============================================================================
 // 6. HELPER COMPONENT: USER ROW
 // ============================================================================
-function UserRow({ targetUser, currentUser, onSave, isReadOnly }) {
+function UserRow({ targetUser, currentUser, onSave, onDelete, isReadOnly }) {
    const [u, setU] = useState(targetUser.username);
    const [p, setP] = useState(targetUser.password);
    const [r, setR] = useState(targetUser.role || 'user');
@@ -761,6 +1112,7 @@ function UserRow({ targetUser, currentUser, onSave, isReadOnly }) {
    let canEdit = !isReadOnly && (currentUser.role === 'admin' || (currentUser.role === 'operator' && targetUser.role !== 'admin'));
    const showPassword = currentUser.role === 'admin' || targetUser.role !== 'admin';
    const canEditRole = !isReadOnly && currentUser.role === 'admin';
+   const canDelete = !isReadOnly && currentUser.role === 'admin' && targetUser.id !== currentUser.id;
 
    const handleChange = (type, val) => {
       if(type === 'u') setU(val); 
@@ -818,6 +1170,17 @@ function UserRow({ targetUser, currentUser, onSave, isReadOnly }) {
             )}
             {!canEdit && <Lock size={16} className="mx-auto text-gray-300"/>}
          </td>
+         {onDelete && (
+            <td className="p-3 text-center align-middle">
+               {canDelete ? (
+                  <button onClick={() => onDelete(targetUser)} className="text-red-600 hover:bg-red-100 p-2 rounded bg-red-50 shadow-sm border border-red-200 transition-all hover:scale-110" title="Hapus Akun">
+                     <Trash2 size={18}/>
+                  </button>
+               ) : (
+                  <Lock size={16} className="mx-auto text-gray-300"/>
+               )}
+            </td>
+         )}
       </tr>
    );
 }

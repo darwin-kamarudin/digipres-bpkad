@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">DigiPres BPKAD</string>
+    <string name="title_activity_main">DigiPres BPKAD</string>
+    <string name="package_name">com.absensidigital.app</string>
+    <string name="custom_url_scheme">com.absensidigital.app</string>
+</resources>

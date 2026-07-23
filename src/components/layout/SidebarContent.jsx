@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom'; // IMPORT HOOKS ROUTER
-import { 
-  LayoutDashboard, Users, FileText, Settings, LogOut, CheckSquare, 
-  FileCheck, ClipboardList, Printer, Mail, CalendarRange, ChevronDown, 
-  ShieldCheck, BarChart3, Sliders, PanelLeftClose, X 
+import {
+  LayoutDashboard, Users, FileText, Settings, LogOut, CheckSquare,
+  FileCheck, ClipboardList, Printer, CalendarRange, ChevronDown,
+  BarChart3, Sliders, PanelLeftClose, X, MapPinCheck
 } from 'lucide-react';
 
 export default function SidebarContent({ 
@@ -22,10 +22,9 @@ export default function SidebarContent({
   
   // State dropdown grup
   const [openGroups, setOpenGroups] = useState({
-    manajemen: true,
     laporan: true,
     pengaturan: false,
-    userRekapan: true 
+    userRekapan: true
   });
 
   const toggleGroup = (group) => {
@@ -132,16 +131,6 @@ export default function SidebarContent({
                  )}
                </div>
 
-               {/* GRUP MANAJEMEN */}
-               <div className="animate-in fade-in slide-in-from-left-2 duration-300">
-                 <GroupHeader id="manajemen" label="Manajemen" icon={ShieldCheck} />
-                 {openGroups.manajemen && (
-                   <div className="space-y-1 mt-1 ml-4 border-l-2 border-slate-800 pl-2 animate-in slide-in-from-top-2 duration-300">
-                      <NavItem path="/aplikasi-surat" icon={Mail} label="Aplikasi Surat" isSubItem />
-                   </div>
-                 )}
-               </div>
-
                {/* MENU MANDIRI */}
                <div className="animate-in fade-in slide-in-from-left-2 duration-700">
                   <NavItem path="/cetak-manual" icon={Printer} label="Cetak Absensi Manual" />
@@ -162,22 +151,10 @@ export default function SidebarContent({
              /* TAMPILAN USER BIASA */
              <div className="pt-2 space-y-1 animate-in fade-in duration-500">
                 <NavItem path="/absensi-mandiri" icon={CheckSquare} label="Absensi Mandiri" />
-                <NavItem path="/status-absensi" icon={FileCheck} label="Status Absensi" />
-
-                <div className="pt-2 animate-in fade-in slide-in-from-left-2 duration-500">
-                   <GroupHeader id="userRekapan" label="Rekapan Absensi" icon={BarChart3} />
-                   {openGroups.userRekapan && (
-                      <div className="space-y-1 mt-1 ml-4 border-l-2 border-slate-800 pl-2 animate-in slide-in-from-top-2 duration-300">
-                         <NavItem path="/laporan-harian" icon={FileText} label="Laporan Harian" isSubItem />
-                         <NavItem path="/laporan-bulanan" icon={ClipboardList} label="Rekapan Bulanan" isSubItem />
-                         <NavItem path="/rekapan-tahunan" icon={CalendarRange} label="Rekapan Tahunan" isSubItem />
-                      </div>
-                   )}
-                </div>
-
-                <div className="pt-2">
-                   <NavItem path="/cetak-manual" icon={Printer} label="Cetak Absensi Manual" />
-                </div>
+                <NavItem path="/riwayat-absensi" icon={FileCheck} label="Riwayat Absensi" />
+                <NavItem path="/status-lokasi" icon={MapPinCheck} label="Status Lokasi" />
+                <NavItem path="/laporan-bulanan" icon={ClipboardList} label="Rekapan Bulanan" />
+                <NavItem path="/pengaturan" icon={Settings} label="Pengaturan" />
              </div>
           )}
        </nav>

@@ -1,3 +1,19 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@layer utilities {
+  /* Utilitas jarak aman untuk notch/status bar & home indicator saat dibungkus Capacitor */
+  .safe-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .safe-offset-top {
+    top: calc(env(safe-area-inset-top, 0px) + 1rem);
+  }
+}
+
+/* Nonaktifkan efek tekan biru bawaan pada tap di perangkat mobile */
+button, a {
+  -webkit-tap-highlight-color: transparent;
+}

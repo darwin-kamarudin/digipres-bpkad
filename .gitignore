@@ -44,3 +44,18 @@ desktop.ini
 # Jika Anda menggunakan Firebase CLI, abaikan file debugnya
 .firebase/
 firebase-debug.log*
+
+
+# --- Folder Backup ---
+backup
+
+# --- CAPACITOR / ANDROID (Hasil Build Native) ---
+android/app/build/
+android/build/
+android/.gradle/
+android/captures/
+android/local.properties
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
+ios/App/build/
+ios/App/Pods/

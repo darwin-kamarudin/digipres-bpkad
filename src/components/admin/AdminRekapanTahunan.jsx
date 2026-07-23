@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Printer, FileDown, Search, X, ChevronDown, UserCheck } from 'lucide-react';
+import { Printer, FileDown, Search, X, ChevronDown, UserCheck, Loader2 } from 'lucide-react';
 import { DEFAULT_LOGO_URL } from '../../utils/helpers';
 import { getYearlyStats } from '../../utils/statistics';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 
-export default function AdminRekapanTahunan({ employees, attendance, settings, user }) {
-  // --- 1. LOGIKA TAHUN DINAMIS ---
+// TAMBAHKAN fetchAttendanceByRange KE PROPS
+export default function AdminRekapanTahunan({ employees, settings, user, fetchAttendanceByRange }) {
   const startYear = 2024;
   const currentYear = new Date().getFullYear();
   const yearsList = [];
@@ -14,20 +14,19 @@ export default function AdminRekapanTahunan({ employees, attendance, settings, u
       yearsList.push(y);
   }
 
-  // State
   const [year, setYear] = useState(currentYear.toString());
   const [selectedUserId, setSelectedUserId] = useState('');
   
-  // State untuk Pencarian Pegawai
+  // State Data Report
+  const [reportData, setReportData] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
-  // State untuk Opsi Tanda Tangan
   const [showSecretary, setShowSecretary] = useState(true);
   const [showLeader, setShowLeader] = useState(true);
-
-  // State untuk Orientasi Cetak
   const [printOrientation, setPrintOrientation] = useState('landscape');
 
   const isUserMode = user && user.role === 'user';
@@ -38,10 +37,21 @@ export default function AdminRekapanTahunan({ employees, attendance, settings, u
       }
   }, [isUserMode, user]);
 
-  const sortedEmployees = employees
-    .filter(e => e.role === 'user')
-    .sort((a, b) => (parseInt(a.no) || 999) - (parseInt(b.no) || 999));
+  // --- LOGIKA FETCH DATA TAHUNAN ---
+  useEffect(() => {
+      const loadYearlyData = async () => {
+          if (!fetchAttendanceByRange) return;
+          setIsLoading(true);
+          const startStr = `${year}-01-01`;
+          const endStr = `${year}-12-31`;
+          const data = await fetchAttendanceByRange(startStr, endStr);
+          setReportData(data);
+          setIsLoading(false);
+      };
+      loadYearlyData();
+  }, [year, fetchAttendanceByRange]);
 
+  const sortedEmployees = employees.filter(e => e.role === 'user').sort((a, b) => (parseInt(a.no) || 999) - (parseInt(b.no) || 999));
   const filteredEmployees = sortedEmployees.filter(emp => 
     emp.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (emp.nip && emp.nip.includes(searchTerm)) ||
@@ -49,12 +59,10 @@ export default function AdminRekapanTahunan({ employees, attendance, settings, u
   );
 
   const selectedEmployee = sortedEmployees.find(e => e.id === selectedUserId);
+  const secretary = employees.find(e => e.jabatan && e.jabatan.toLowerCase().includes('sekretaris') && !e.jabatan.toLowerCase().includes('staf'));
 
-  const secretary = employees.find(e => 
-    e.jabatan && e.jabatan.toLowerCase().includes('sekretaris') && !e.jabatan.toLowerCase().includes('staf')
-  );
-
-  const yearlyData = selectedEmployee ? getYearlyStats(year, attendance, selectedUserId) : [];
+  // Gunakan reportData untuk statistik, bukan global attendance
+  const yearlyData = selectedEmployee ? getYearlyStats(year, reportData, selectedUserId) : [];
 
   const getFormattedDate = () => {
     return new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -89,16 +97,16 @@ export default function AdminRekapanTahunan({ employees, attendance, settings, u
       setIsDropdownOpen(true);
   };
 
-  // --- FUNGSI EXPORT EXCEL ---
   const handleExportExcel = async () => {
     if (!selectedEmployee) return alert("Pilih pegawai terlebih dahulu");
+    if (isLoading) return alert("Data sedang dimuat...");
 
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Rekapan Tahunan');
 
     const columns = [
         { header: '', width: 5 },
-        { header: '', width: 20 }, 
+        { header: '', width: 20 },
     ];
     for(let i=0; i<11; i++) columns.push({ header: '', width: 8 });
     
@@ -115,6 +123,7 @@ export default function AdminRekapanTahunan({ employees, attendance, settings, u
         }
     } catch (error) { console.warn("Gagal memuat logo:", error); }
 
+    // Kop Surat & Judul (Sama)
     worksheet.mergeCells(1, 2, 1, lastColIndex);
     const row1 = worksheet.getCell(1, 2);
     row1.value = (settings.parentAgency || '').toUpperCase();
@@ -156,15 +165,12 @@ export default function AdminRekapanTahunan({ employees, attendance, settings, u
     worksheet.mergeCells(infoRowStart, 1, infoRowStart, 2);
     worksheet.getCell(infoRowStart, 1).value = `Nama Pegawai : ${selectedEmployee.nama}`;
     worksheet.getCell(infoRowStart, 1).font = { bold: true };
-
     worksheet.mergeCells(infoRowStart, 8, infoRowStart, 10);
     worksheet.getCell(infoRowStart, 8).value = `Status : ${selectedEmployee.statusPegawai || '-'}`;
     worksheet.getCell(infoRowStart, 8).font = { bold: true };
-
     worksheet.mergeCells(infoRowStart + 1, 1, infoRowStart + 1, 2);
     worksheet.getCell(infoRowStart + 1, 1).value = `NIP : ${selectedEmployee.nip || '-'}`;
     worksheet.getCell(infoRowStart + 1, 1).font = { bold: true };
-
     worksheet.mergeCells(infoRowStart + 1, 8, infoRowStart + 1, 10);
     worksheet.getCell(infoRowStart + 1, 8).value = `Jabatan : ${selectedEmployee.jabatan || '-'}`;
     worksheet.getCell(infoRowStart + 1, 8).font = { bold: true };
@@ -173,7 +179,6 @@ export default function AdminRekapanTahunan({ employees, attendance, settings, u
 
     const hRow = 12;
     const subHRow = 13;
-
     worksheet.mergeCells(hRow, 1, subHRow, 1); worksheet.getCell(hRow, 1).value = "No";
     worksheet.mergeCells(hRow, 2, subHRow, 2); worksheet.getCell(hRow, 2).value = "Bulan";
     
@@ -183,7 +188,6 @@ export default function AdminRekapanTahunan({ employees, attendance, settings, u
         worksheet.mergeCells(hRow, startCol, hRow, startCol + 1);
         worksheet.getCell(hRow, startCol).value = cat;
     });
-
     worksheet.mergeCells(hRow, 13, subHRow, 13); worksheet.getCell(hRow, 13).value = "Total";
 
     const colors = ['FFC6EFCE', 'FFFFEB9C', 'FFB3C6E7', 'FFE2C6E6', 'FFF7CBAC'];
@@ -277,19 +281,16 @@ export default function AdminRekapanTahunan({ employees, attendance, settings, u
         worksheet.mergeCells(signRow, 2, signRow, 5);
         worksheet.getCell(signRow, 2).value = showLeader ? "Mengetahui," : "";
         worksheet.getCell(signRow, 2).alignment = { horizontal: 'center' };
-
         worksheet.mergeCells(signRow + 1, 2, signRow + 1, 5);
         const cellJob = worksheet.getCell(signRow + 1, 2);
         cellJob.value = showLeader ? (settings.kepalaJabatan || '') : (secretary ? secretary.jabatan : '');
         cellJob.font = { bold: true };
         cellJob.alignment = { horizontal: 'center' };
-
         worksheet.mergeCells(signRow + 6, 2, signRow + 6, 5);
         const cellName = worksheet.getCell(signRow + 6, 2);
         cellName.value = showLeader ? (settings.kepalaName || '').toUpperCase() : (secretary ? (secretary.nama || '').toUpperCase() : '');
         cellName.font = { bold: true, underline: true };
         cellName.alignment = { horizontal: 'center' };
-
         worksheet.mergeCells(signRow + 7, 2, signRow + 7, 5);
         const cellNip = worksheet.getCell(signRow + 7, 2);
         cellNip.value = showLeader ? `NIP. ${settings.kepalaNip}` : (secretary ? `NIP. ${secretary.nip}` : '');
@@ -301,34 +302,22 @@ export default function AdminRekapanTahunan({ employees, attendance, settings, u
         const dateCell = worksheet.getCell(signRow, rightStart);
         dateCell.value = `${settings.titimangsa || 'Tempat'}, ${getFormattedDate()}`;
         dateCell.alignment = { horizontal: 'center' };
-
         worksheet.mergeCells(signRow + 1, rightStart, signRow + 1, rightEnd);
         const cellJobR = worksheet.getCell(signRow + 1, rightStart);
-        if (showSecretary && showLeader) {
-             cellJobR.value = secretary ? secretary.jabatan : 'Sekretaris';
-        } else {
-             cellJobR.value = settings.kepalaJabatan || 'Kepala Dinas';
-        }
+        if (showSecretary && showLeader) { cellJobR.value = secretary ? secretary.jabatan : 'Sekretaris'; } 
+        else { cellJobR.value = settings.kepalaJabatan || 'Kepala Dinas'; }
         cellJobR.font = { bold: true };
         cellJobR.alignment = { horizontal: 'center' };
-
         worksheet.mergeCells(signRow + 6, rightStart, signRow + 6, rightEnd);
         const cellNameR = worksheet.getCell(signRow + 6, rightStart);
-        if (showSecretary && showLeader) {
-            cellNameR.value = secretary ? (secretary.nama).toUpperCase() : '................';
-        } else {
-            cellNameR.value = (settings.kepalaName || '').toUpperCase();
-        }
+        if (showSecretary && showLeader) { cellNameR.value = secretary ? (secretary.nama).toUpperCase() : '................'; } 
+        else { cellNameR.value = (settings.kepalaName || '').toUpperCase(); }
         cellNameR.font = { bold: true, underline: true };
         cellNameR.alignment = { horizontal: 'center' };
-
         worksheet.mergeCells(signRow + 7, rightStart, signRow + 7, rightEnd);
         const cellNipR = worksheet.getCell(signRow + 7, rightStart);
-        if (showSecretary && showLeader) {
-            cellNipR.value = secretary ? `NIP. ${secretary.nip}` : '................';
-        } else {
-            cellNipR.value = `NIP. ${settings.kepalaNip}`;
-        }
+        if (showSecretary && showLeader) { cellNipR.value = secretary ? `NIP. ${secretary.nip}` : '................'; } 
+        else { cellNipR.value = `NIP. ${settings.kepalaNip}`; }
         cellNipR.alignment = { horizontal: 'center' };
     }
 
@@ -342,17 +331,7 @@ export default function AdminRekapanTahunan({ employees, attendance, settings, u
          @media print {
            @page { size: ${printOrientation}; margin: 10mm; }
            body { -webkit-print-color-adjust: exact; background-color: white !important; }
-           
-           /* MENGHILANGKAN GARIS TEPI/SHADOW SAAT PRINT */
-           .print-clean {
-              box-shadow: none !important;
-              border: none !important;
-              margin: 0 !important;
-              padding: 0 !important;
-              border-radius: 0 !important;
-           }
-           
-           /* Sembunyikan elemen non-print */
+           .print-clean { box-shadow: none !important; border: none !important; margin: 0 !important; padding: 0 !important; width: 100% !important; }
            .no-print { display: none !important; }
          }
        `}</style>
@@ -363,14 +342,8 @@ export default function AdminRekapanTahunan({ employees, attendance, settings, u
             <div className="flex gap-4 items-end flex-wrap">
                 <div>
                     <label className="text-xs font-bold block mb-1">Pilih Tahun</label>
-                    <select 
-                        value={year} 
-                        onChange={e => setYear(e.target.value)} 
-                        className="border p-2 rounded w-24 bg-white focus:ring-2 focus:ring-blue-500 outline-none"
-                    >
-                        {yearsList.map(y => (
-                            <option key={y} value={y}>{y}</option>
-                        ))}
+                    <select value={year} onChange={e=>setYear(e.target.value)} className="border p-2 rounded w-24 bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                       {yearsList.map(y => <option key={y} value={y}>{y}</option>)}
                     </select>
                 </div>
                 
@@ -426,8 +399,8 @@ export default function AdminRekapanTahunan({ employees, attendance, settings, u
                 <button onClick={() => window.print()} disabled={!selectedUserId} className="bg-slate-800 text-white px-4 py-2 rounded flex items-center hover:bg-black disabled:bg-gray-300 shadow-sm transition-transform hover:scale-105">
                     <Printer size={16} className="mr-2"/> Cetak
                 </button>
-                <button onClick={handleExportExcel} disabled={!selectedUserId} className="bg-green-600 text-white px-4 py-2 rounded flex items-center hover:bg-green-700 disabled:bg-gray-300 shadow-sm transition-transform hover:scale-105">
-                    <FileDown size={16} className="mr-2"/> Excel Lengkap
+                <button onClick={handleExportExcel} disabled={!selectedUserId || isLoading} className="bg-green-600 text-white px-4 py-2 rounded flex items-center hover:bg-green-700 disabled:bg-gray-400 shadow-sm transition-transform hover:scale-105">
+                    {isLoading ? <Loader2 size={16} className="animate-spin mr-2"/> : <FileDown size={16} className="mr-2"/>} Excel Lengkap
                 </button>
             </div>
           </div>
@@ -439,7 +412,7 @@ export default function AdminRekapanTahunan({ employees, attendance, settings, u
           </div>
        </div>
 
-       {/* REPORT AREA (PREVIEW) - DIBERSIHKAN UNTUK PRINT */}
+       {/* REPORT AREA (PREVIEW) */}
        {selectedEmployee ? (
            <div className="bg-white p-8 rounded shadow print:shadow-none print:border-none print:m-0 print:p-0 print:w-full print:rounded-none print-clean">
               {/* KOP SURAT */}
@@ -456,6 +429,7 @@ export default function AdminRekapanTahunan({ employees, attendance, settings, u
               <div className="text-center mb-6">
                  <h2 className="text-xl font-bold uppercase underline">REKAPITULASI ABSENSI TAHUNAN</h2>
                  <p className="font-bold text-sm uppercase">PERIODE TAHUN: {year}</p>
+                 {isLoading && <p className="text-xs text-blue-500 animate-pulse mt-2">Sedang memuat data...</p>}
               </div>
 
               {/* INFO PEGAWAI */}

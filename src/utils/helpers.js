@@ -13,9 +13,23 @@ export const INITIAL_SETTINGS = {
   // Default Waktu
   jamMasukAwal: '06:00',
   batasAbsenPagi: '10:00',
+  jamSiangAwal: '13:00',
+  batasAbsenSiang: '14:00',
   jamPulangAwal: '16:00',
   batasAbsenSore: '18:00',
-  zonaWaktu: 'Auto' // Auto, WIB, WITA, WIT
+  zonaWaktu: 'Auto', // Auto, WIB, WITA, WIT
+  // Geo Lokasi Absensi
+  geoFenceEnabled: false,
+  geoLocations: [], // [{ id, name, lat, lng, radius }]
+  // Mode Aplikasi: jika true, absensi wajib lewat aplikasi mobile (Capacitor), akses web diblokir
+  mobileOnlyAbsensi: false,
+};
+
+// Pemetaan sesi absensi ke slot jadwal kantor
+export const SESSION_LABELS = {
+  Pagi: 'Check In',
+  Siang: 'Day In',
+  Sore: 'Check Out',
 };
 
 export const formatDateIndo = (dateStr) => {
@@ -52,13 +66,33 @@ export const checkAbsensiTime = (session, customDate = null) => {
   const hour = now.getHours();
   // Pagi: 06.00 - 09.00
   if (session === 'Pagi') {
-    return hour >= 6 && hour < 9; 
+    return hour >= 6 && hour < 9;
+  }
+  // Siang: 13.00 - 14.00
+  if (session === 'Siang') {
+    return hour >= 13 && hour < 14;
   }
   // Sore: 16.00 - 18.00
   if (session === 'Sore') {
     return hour >= 16 && hour < 18;
   }
   return false;
+};
+
+// --- Deteksi perangkat sederhana berdasarkan User Agent ---
+export const getDeviceType = () => {
+  const ua = (typeof navigator !== 'undefined' && navigator.userAgent) || '';
+  if (/android/i.test(ua)) return 'android';
+  if (/iphone|ipad|ipod/i.test(ua)) return 'ios';
+  return 'web';
+};
+
+// --- Hitung durasi jam kerja (format HH:MM) antara dua waktu ISO ---
+export const calcJamKerja = (startIso, endIso) => {
+  if (!startIso || !endIso) return 0;
+  const diffMs = new Date(endIso) - new Date(startIso);
+  if (diffMs <= 0) return 0;
+  return Math.round((diffMs / 3600000) * 10) / 10;
 };
 
 // --- SECURITY UPDATE: Fetch Real Server Time ---
@@ -99,6 +133,24 @@ export const adjustTimezone = (date, zone) => {
 
   return new Date(newTime);
 };
+
+export const HEADER_TITLES = {
+  '/': 'Dashboard',
+  '/input-absensi': 'Input Absensi',
+  '/laporan-harian': 'Laporan Harian',
+  '/laporan-bulanan': 'Rekapan Bulanan',
+  '/rekapan-tahunan': 'Rekapan Tahunan',
+  '/cetak-manual': 'Cetak Manual',
+  '/verifikasi-absensi': 'Verifikasi Absensi',
+  '/data-pegawai': 'Data Pegawai',
+  '/settings': 'Pengaturan',
+  '/absensi-mandiri': 'Absensi Mandiri',
+  '/riwayat-absensi': 'Riwayat Absensi',
+  '/status-lokasi': 'Status Lokasi Absensi',
+  '/pengaturan': 'Pengaturan',
+};
+
+export const getHeaderTitle = (pathname) => HEADER_TITLES[pathname] || 'Aplikasi Absensi';
 
 export const exportToCSV = (data, filename) => {
   const csvContent = "data:text/csv;charset=utf-8," 

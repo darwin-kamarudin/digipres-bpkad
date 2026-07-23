@@ -1,29 +1,49 @@
-import React, { useState, useRef } from 'react';
-import { Download, Printer, Calendar, UserCheck } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Download, Printer, Calendar, UserCheck, Loader2 } from 'lucide-react';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 
-// Pastikan props 'holidays' diterima di sini
-export default function AdminRekapanBulanan({ employees, attendance, settings, user, holidays = [] }) {
-  // State Filter Waktu
+// TAMBAHKAN fetchAttendanceByRange KE PROPS
+export default function AdminRekapanBulanan({ employees, settings, user, holidays = [], fetchAttendanceByRange }) {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   
-  // State Penandatangan
+  // State Data Laporan & Loading
+  const [reportData, setReportData] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+
   const [showSecretary, setShowSecretary] = useState(true);
   const [showLeader, setShowLeader] = useState(true);
-  
-  // State Orientasi Cetak
   const [printOrientation, setPrintOrientation] = useState('landscape');
 
   const componentRef = useRef();
+
+  // --- LOGIKA FETCH DATA OTOMATIS SAAT FILTER BERUBAH ---
+  useEffect(() => {
+    const loadReportData = async () => {
+        if (!fetchAttendanceByRange) return;
+        
+        setIsLoading(true);
+        // Hitung tanggal awal dan akhir bulan yang dipilih
+        // Format YYYY-MM-DD
+        const startStr = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-01`;
+        const lastDay = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+        const endStr = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${lastDay}`;
+
+        // Ambil data dari Firebase
+        const data = await fetchAttendanceByRange(startStr, endStr);
+        setReportData(data);
+        setIsLoading(false);
+    };
+
+    loadReportData();
+  }, [selectedMonth, selectedYear, fetchAttendanceByRange]);
 
   // --- HELPER VARIABLES ---
   const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
   const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
   const monthName = new Date(selectedYear, selectedMonth).toLocaleString('id-ID', { month: 'long' });
 
-  // Helper: Format Tanggal
   const getFormattedDate = () => {
     return new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
   };
@@ -36,17 +56,17 @@ export default function AdminRekapanBulanan({ employees, attendance, settings, u
     e.jabatan && e.jabatan.toLowerCase().includes('sekretaris') && !e.jabatan.toLowerCase().includes('staf')
   );
 
-  // Helper: Cek Hari Libur
   const getHolidayInfo = (dateStr) => {
     if (!holidays) return null;
     return holidays.find(h => h.date === dateStr);
   };
 
-  // --- LOGIKA HITUNG STATISTIK ---
+  // --- LOGIKA HITUNG STATISTIK (MENGGUNAKAN reportData) ---
   const getEmployeeStats = (empId) => {
-    const empAttendance = attendance.filter(a => {
+    // Gunakan reportData, BUKAN attendance prop
+    const empAttendance = reportData.filter(a => {
         const d = new Date(a.date);
-        return a.userId === empId && d.getMonth() === parseInt(selectedMonth) && d.getFullYear() === parseInt(selectedYear);
+        return a.userId === empId;
     });
 
     const countStatus = (statusKey) => {
@@ -67,10 +87,11 @@ export default function AdminRekapanBulanan({ employees, attendance, settings, u
 
   // --- FUNGSI EXPORT EXCEL (FULL FORMAT) ---
   const handleExportExcel = async () => {
+    if (isLoading) return alert("Mohon tunggu, data sedang dimuat...");
+
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Rekapan Bulanan');
 
-    // 1. Definisikan Kolom
     const columns = [
         { header: '', key: 'no', width: 5 },
         { header: '', key: 'nama', width: 35 },
@@ -81,7 +102,6 @@ export default function AdminRekapanBulanan({ employees, attendance, settings, u
     worksheet.columns = columns;
     const lastColIndex = 2 + daysInMonth + 5; 
 
-    // 2. Insert Logo
     try {
         if (settings.logoUrl) {
             const response = await fetch(settings.logoUrl);
@@ -92,7 +112,7 @@ export default function AdminRekapanBulanan({ employees, attendance, settings, u
         }
     } catch (error) { console.warn("Gagal memuat logo:", error); }
 
-    // 3. Kop Surat
+    // Kop Surat & Header
     worksheet.mergeCells(1, 2, 1, lastColIndex);
     const row1 = worksheet.getCell(1, 2);
     row1.value = (settings.parentAgency || '').toUpperCase();
@@ -116,7 +136,6 @@ export default function AdminRekapanBulanan({ employees, attendance, settings, u
     }
     worksheet.addRow([]); 
 
-    // 4. Judul
     worksheet.mergeCells(6, 1, 6, lastColIndex);
     const row6 = worksheet.getCell(6, 1);
     row6.value = `REKAPITULASI ABSENSI PEGAWAI`;
@@ -131,7 +150,6 @@ export default function AdminRekapanBulanan({ employees, attendance, settings, u
 
     worksheet.addRow([]);
 
-    // 5. Header Tabel
     const hRow = 9;
     worksheet.mergeCells(hRow, 1, hRow + 1, 1); worksheet.getCell(hRow, 1).value = "No";
     worksheet.mergeCells(hRow, 2, hRow + 1, 2); worksheet.getCell(hRow, 2).value = "Nama Pegawai / NIP";
@@ -159,7 +177,7 @@ export default function AdminRekapanBulanan({ employees, attendance, settings, u
         row.alignment = { vertical: 'middle', horizontal: 'center' };
     });
 
-    // 6. Isi Data
+    // Isi Data (Menggunakan reportData)
     const sortedEmployees = employees.filter(emp => emp.role === 'user').sort((a, b) => (parseInt(a.no) || 999) - (parseInt(b.no) || 999));
     let currentRow = 11;
 
@@ -175,36 +193,30 @@ export default function AdminRekapanBulanan({ employees, attendance, settings, u
 
         daysArray.forEach((day, dIdx) => {
             const dateStr = getAbsenceDate(day);
-            const dayAtt = attendance.filter(a => a.userId === emp.id && a.date === dateStr);
+            const dayAtt = reportData.filter(a => a.userId === emp.id && a.date === dateStr); // Ganti attendance -> reportData
             const cell = row.getCell(3 + dIdx);
-            const holiday = getHolidayInfo(dateStr); // Cek Holiday
+            const holiday = getHolidayInfo(dateStr);
             
             cell.alignment = { vertical: 'middle', horizontal: 'center' };
 
-            // Default: Cek Weekend (Sabtu/Minggu)
             const currDate = new Date(selectedYear, selectedMonth, day);
             const isWeekend = currDate.getDay() === 0 || currDate.getDay() === 6;
 
-            // Prioritas Warna: Holiday (Merah) > Weekend (Abu)
             if (holiday) {
-                // Background Merah Muda untuk Libur
                 cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFC7CE' } };
-                // Jika tidak ada absensi, tulis nama libur (Rotasi 90 derajat)
                 if (dayAtt.length === 0) {
                     cell.value = holiday.description || 'Libur';
                     cell.alignment = { textRotation: 90, vertical: 'middle', horizontal: 'center', wrapText: true };
-                    cell.font = { size: 8, color: { argb: 'FF9C0006' } }; // Merah Tua
+                    cell.font = { size: 8, color: { argb: 'FF9C0006' } };
                 }
             } else if (isWeekend) {
                 cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEEEEEE' } };
             }
 
-            // Jika ada data absensi, timpa konten (tapi background tetap ikut logic di atas)
             if (dayAtt.length > 0) {
                 const att = dayAtt.find(a => a.session === 'Pagi') || dayAtt[0];
-                // Reset alignment text rotation jika ada isi
-                cell.alignment = { vertical: 'middle', horizontal: 'center' }; 
-
+                cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                
                 if (att.status === 'Hadir') {
                     cell.value = '•';
                     cell.font = { size: 16, bold: true, color: { argb: 'FF008000' } };
@@ -242,13 +254,13 @@ export default function AdminRekapanBulanan({ employees, attendance, settings, u
         currentRow++;
     });
 
+    // Border & Tanda Tangan (Sama seperti sebelumnya)
     for(let r = hRow; r < currentRow; r++) {
         for(let c = 1; c <= lastColIndex; c++) {
             worksheet.getCell(r, c).border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
         }
     }
 
-    // 7. Tanda Tangan
     const signRow = currentRow + 2;
     const rightStart = lastColIndex - 6;
     const rightEnd = lastColIndex;
@@ -257,19 +269,16 @@ export default function AdminRekapanBulanan({ employees, attendance, settings, u
         worksheet.mergeCells(signRow, 2, signRow, 6);
         worksheet.getCell(signRow, 2).value = showLeader ? "Mengetahui," : "";
         worksheet.getCell(signRow, 2).alignment = { horizontal: 'center' };
-
         worksheet.mergeCells(signRow + 1, 2, signRow + 1, 6);
         const secJob = worksheet.getCell(signRow + 1, 2);
         secJob.value = (showLeader) ? (settings.kepalaJabatan || 'Kepala Dinas') : (secretary ? secretary.jabatan : '');
         secJob.font = { bold: true };
         secJob.alignment = { horizontal: 'center' };
-
         worksheet.mergeCells(signRow + 6, 2, signRow + 6, 6);
         const secName = worksheet.getCell(signRow + 6, 2);
         secName.value = (showLeader) ? (settings.kepalaName) : (secretary ? secretary.nama : '');
         secName.font = { bold: true, underline: true };
         secName.alignment = { horizontal: 'center' };
-
         worksheet.mergeCells(signRow + 7, 2, signRow + 7, 6);
         const secNip = worksheet.getCell(signRow + 7, 2);
         secNip.value = (showLeader) ? `NIP. ${settings.kepalaNip}` : (secretary ? `NIP. ${secretary.nip}` : '');
@@ -281,21 +290,18 @@ export default function AdminRekapanBulanan({ employees, attendance, settings, u
         const dateCell = worksheet.getCell(signRow, rightStart);
         dateCell.value = `${settings.titimangsa || 'Tempat'}, ${getFormattedDate()}`;
         dateCell.alignment = { horizontal: 'center' };
-
         worksheet.mergeCells(signRow + 1, rightStart, signRow + 1, rightEnd);
         const leadJob = worksheet.getCell(signRow + 1, rightStart);
         if (showSecretary && showLeader) { leadJob.value = secretary ? secretary.jabatan : 'Sekretaris'; } 
         else { leadJob.value = settings.kepalaJabatan || 'Kepala Dinas'; }
         leadJob.font = { bold: true };
         leadJob.alignment = { horizontal: 'center' };
-
         worksheet.mergeCells(signRow + 6, rightStart, signRow + 6, rightEnd);
         const leadName = worksheet.getCell(signRow + 6, rightStart);
         if (showSecretary && showLeader) { leadName.value = secretary ? secretary.nama : '................'; } 
         else { leadName.value = settings.kepalaName; }
         leadName.font = { bold: true, underline: true };
         leadName.alignment = { horizontal: 'center' };
-
         worksheet.mergeCells(signRow + 7, rightStart, signRow + 7, rightEnd);
         const leadNip = worksheet.getCell(signRow + 7, rightStart);
         if (showSecretary && showLeader) { leadNip.value = secretary ? `NIP. ${secretary.nip}` : '................'; } 
@@ -313,48 +319,21 @@ export default function AdminRekapanBulanan({ employees, attendance, settings, u
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      
-      {/* CSS KHUSUS CETAK */}
       <style>{`
          @media print {
            @page { size: ${printOrientation}; margin: 10mm; }
-           /* Background graphics enabled */
-           body { 
-             -webkit-print-color-adjust: exact !important; 
-             print-color-adjust: exact !important; 
-             background-color: white !important; 
-           }
+           body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; background-color: white !important; }
            ::-webkit-scrollbar { display: none; }
-           .print-clean {
-              box-shadow: none !important;
-              border: none !important;
-              margin: 0 !important;
-              padding: 0 !important;
-              width: 100% !important;
-              max-width: none !important;
-              overflow: visible !important;
-           }
+           .print-clean { box-shadow: none !important; border: none !important; margin: 0 !important; padding: 0 !important; width: 100% !important; max-width: none !important; overflow: visible !important; }
            .overflow-auto { overflow: visible !important; }
            .print-hidden { display: none !important; }
          }
          .table-bordered th, .table-bordered td { border: 1px solid #000 !important; padding: 2px; }
-         /* CSS untuk teks vertikal di HTML Table */
-         .vertical-text {
-            writing-mode: vertical-rl;
-            text-orientation: mixed;
-            transform: rotate(180deg);
-            white-space: nowrap;
-            font-size: 8px;
-            line-height: 1;
-            margin: 0 auto;
-            max-height: 28px;
-            overflow: hidden;
-         }
+         .vertical-text { writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg); white-space: nowrap; font-size: 8px; line-height: 1; margin: 0 auto; max-height: 28px; overflow: hidden; }
       `}</style>
 
       {/* PANEL KONTROL */}
       <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 space-y-4 print-hidden">
-        {/* ... (Bagian Kontrol sama seperti sebelumnya) ... */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-2">
                 <div className="bg-blue-100 p-2 rounded-lg text-blue-600"><Calendar size={20} /></div>
@@ -381,8 +360,9 @@ export default function AdminRekapanBulanan({ employees, attendance, settings, u
                     <Printer size={16} /> Cetak
                 </button>
                 
-                <button onClick={handleExportExcel} className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-green-700 shadow-sm transition-transform hover:scale-105">
-                    <Download size={16} /> Excel Lengkap
+                <button onClick={handleExportExcel} disabled={isLoading} className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-green-700 shadow-sm transition-transform hover:scale-105 disabled:bg-gray-400">
+                    {isLoading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} 
+                    Excel Lengkap
                 </button>
             </div>
         </div>
@@ -392,12 +372,10 @@ export default function AdminRekapanBulanan({ employees, attendance, settings, u
                 <UserCheck size={18}/> <span>Opsi Tanda Tangan:</span>
             </div>
             <label className="flex items-center gap-2 cursor-pointer text-sm select-none">
-                <input type="checkbox" checked={showSecretary} onChange={(e) => setShowSecretary(e.target.checked)} className="rounded text-blue-600"/>
-                TTD Sekretaris
+                <input type="checkbox" checked={showSecretary} onChange={(e) => setShowSecretary(e.target.checked)} className="rounded text-blue-600"/> TTD Sekretaris
             </label>
             <label className="flex items-center gap-2 cursor-pointer text-sm select-none">
-                <input type="checkbox" checked={showLeader} onChange={(e) => setShowLeader(e.target.checked)} className="rounded text-blue-600"/>
-                TTD Pimpinan
+                <input type="checkbox" checked={showLeader} onChange={(e) => setShowLeader(e.target.checked)} className="rounded text-blue-600"/> TTD Pimpinan
             </label>
         </div>
       </div>
@@ -406,7 +384,7 @@ export default function AdminRekapanBulanan({ employees, attendance, settings, u
       <div className="bg-gray-100 p-4 rounded-lg overflow-auto flex justify-center print:bg-white print:p-0 print:m-0 print:block">
         <div className="bg-white p-8 shadow-lg w-[297mm] min-h-[210mm] text-slate-900 relative print-clean">
             
-            {/* KOP */}
+            {/* Kop & Judul */}
             <div className="flex border-b-4 border-double border-black pb-4 mb-6 items-center justify-center relative">
                 <img src={settings.logoUrl} alt="Logo" className="h-20 w-auto absolute left-0 top-0 object-contain"/>
                 <div className="w-full text-center px-24">
@@ -415,16 +393,15 @@ export default function AdminRekapanBulanan({ employees, attendance, settings, u
                     <p className="text-sm italic">{settings.address}</p>
                 </div>
             </div>
-
-            {/* JUDUL */}
             <div className="text-center mb-6">
                 <h2 className="text-xl font-bold uppercase underline decoration-2 underline-offset-4">REKAPITULASI ABSENSI PEGAWAI</h2>
                 <p className="font-bold text-sm uppercase mt-1">
                     BULAN: {monthName.toUpperCase()} {selectedYear}
                 </p>
+                {isLoading && <p className="text-xs text-blue-500 animate-pulse mt-2">Sedang memuat data terbaru...</p>}
             </div>
 
-            {/* TABEL */}
+            {/* Tabel (Menggunakan reportData) */}
             <table className="w-full text-[10px] border-collapse table-bordered text-center border border-black">
                 <thead>
                     <tr className="bg-slate-200 print:bg-slate-200">
@@ -444,7 +421,7 @@ export default function AdminRekapanBulanan({ employees, attendance, settings, u
                 </thead>
                 <tbody>
                     {filteredEmployees.map((emp, index) => {
-                        const stats = getEmployeeStats(emp.id);
+                        const stats = getEmployeeStats(emp.id); // Stat juga otomatis pakai reportData
                         return (
                             <tr key={emp.id} className="hover:bg-slate-50">
                                 <td className="border border-black">{index + 1}</td>
@@ -454,22 +431,20 @@ export default function AdminRekapanBulanan({ employees, attendance, settings, u
                                 </td>
                                 {daysArray.map(day => {
                                     const dateStr = getAbsenceDate(day);
-                                    const dayAtt = attendance.filter(a => a.userId === emp.id && a.date === dateStr);
-                                    const holiday = getHolidayInfo(dateStr); // Cek Hari Libur
+                                    // Gunakan reportData
+                                    const dayAtt = reportData.filter(a => a.userId === emp.id && a.date === dateStr);
+                                    const holiday = getHolidayInfo(dateStr);
                                     
                                     let content = '';
                                     let bgClass = '';
                                     let isHolidayCell = false;
 
-                                    // 1. Cek Libur & Weekend
                                     const currDate = new Date(selectedYear, selectedMonth, day);
                                     const isWeekend = currDate.getDay() === 0 || currDate.getDay() === 6;
 
                                     if (holiday) {
-                                        // JIKA HARI LIBUR NASIONAL/CUTI
                                         bgClass = 'bg-red-200 print:bg-red-200';
                                         isHolidayCell = true;
-                                        // Jika tidak ada absensi, tampilkan nama libur secara vertikal
                                         if (dayAtt.length === 0) {
                                             content = (
                                                 <div className="h-full flex items-center justify-center overflow-hidden">
@@ -483,7 +458,6 @@ export default function AdminRekapanBulanan({ employees, attendance, settings, u
                                         bgClass = 'bg-slate-200 print:bg-slate-200';
                                     }
 
-                                    // 2. Cek Data Absensi (Timpa content jika ada data)
                                     if (dayAtt.length > 0) {
                                         const att = dayAtt.find(a => a.session === 'Pagi') || dayAtt[0];
                                         if(att.status === 'Hadir') { content = '•'; if(!isHolidayCell) bgClass = 'text-green-600 font-bold text-lg'; else content = <span className="text-green-800 font-bold text-lg">•</span>; }
@@ -506,8 +480,7 @@ export default function AdminRekapanBulanan({ employees, attendance, settings, u
                 </tbody>
             </table>
 
-            {/* TANDA TANGAN */}
-            {/* ... (Bagian Tanda Tangan Tetap Sama) ... */}
+            {/* Tanda Tangan */}
             <div className="mt-4 flex justify-between text-center leading-tight text-sm">
                {showSecretary && showLeader && (
                    <div className="min-w-[200px] w-auto px-4 mt-4">

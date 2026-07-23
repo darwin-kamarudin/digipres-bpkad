@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Printer } from 'lucide-react';
 import { getTodayString, getWeekNumber, formatDateIndo, DEFAULT_LOGO_URL } from '../../utils/helpers';
+import MobileHeader from './MobileHeader';
 
 export default function UserRekapan({ user, attendance, settings, employees = [] }) {
+   const navigate = useNavigate();
    const [viewMode, setViewMode] = useState('bulanan');
    const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
    const [week, setWeek] = useState(getTodayString());
@@ -42,7 +45,10 @@ export default function UserRekapan({ user, attendance, settings, employees = []
       : `Minggu ke-${getWeekNumber(new Date(week))} (${new Date(week).getFullYear()})`;
 
    return (
-      <div className="space-y-6 animate-in fade-in duration-300">
+      <div className="min-h-full bg-slate-50">
+         <MobileHeader title="Rekapan Bulanan" onBack={() => navigate('/')} />
+
+         <div className="space-y-6 animate-in fade-in duration-300 p-4">
          {/* CONTROLS (Non-Print) */}
          <div className="bg-white p-4 rounded shadow print:hidden flex flex-col gap-4">
              <div className="flex flex-wrap gap-4 items-end justify-between">
@@ -215,6 +221,7 @@ export default function UserRekapan({ user, attendance, settings, employees = []
                    )}
                 </div>
              </div>
+         </div>
          </div>
       </div>
    );
