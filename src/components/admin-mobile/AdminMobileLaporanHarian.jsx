@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Printer, ChevronDown } from 'lucide-react';
-import { getTodayString } from '../../utils/helpers';
+import { getTodayString, formatDateIndo } from '../../utils/helpers';
 import { getDailyStats } from '../../utils/statistics';
 import LaporanHarianDocument from '../admin/LaporanHarianDocument';
 import PinchZoomView from './PinchZoomView';
+import { printDocumentNode } from '../../lib/printDocument';
 
 // Versi mobile-native dari AdminLaporanHarian.jsx. Panel kontrol (tanggal,
 // sesi, opsi cetak) dirombak jadi kartu bergaya aplikasi native; badan
@@ -18,6 +19,7 @@ export default function AdminMobileLaporanHarian({ employees, attendance, status
   const [printTemplate, setPrintTemplate] = useState('v2');
   const [showSignature, setShowSignature] = useState(true);
   const [showOptions, setShowOptions] = useState(false);
+  const docRef = useRef(null);
 
   const selectedDate = new Date(date);
   const isWeekend = selectedDate.getDay() === 0 || selectedDate.getDay() === 6;
@@ -93,7 +95,7 @@ export default function AdminMobileLaporanHarian({ employees, attendance, status
         )}
 
         <button
-          onClick={() => window.print()}
+          onClick={() => printDocumentNode(docRef.current, `Laporan Absensi Harian - ${formatDateIndo(date)}`)}
           className="w-full flex items-center justify-center gap-2 bg-red-700 active:bg-red-800 text-white p-3 rounded-xl font-bold"
         >
           <Printer size={18} /> Cetak Laporan
@@ -103,23 +105,25 @@ export default function AdminMobileLaporanHarian({ employees, attendance, status
       <p className="text-center text-[11px] text-slate-400 -mb-1 print:hidden">Cubit (pinch) untuk perbesar, geser untuk lihat detail. Ketuk dua kali untuk reset.</p>
 
       <PinchZoomView contentWidth={640}>
-        <LaporanHarianDocument
-          settings={settings}
-          date={date}
-          session={session}
-          isNonEffective={isNonEffective}
-          holidayData={holidayData}
-          printTemplate={printTemplate}
-          showSignature={showSignature}
-          counts={counts}
-          hadirList={hadirList}
-          sakitList={sakitList}
-          izinList={izinList}
-          cutiList={cutiList}
-          dlList={dlList}
-          alpaList={alpaList}
-          listTidakHadir={listTidakHadir}
-        />
+        <div ref={docRef}>
+          <LaporanHarianDocument
+            settings={settings}
+            date={date}
+            session={session}
+            isNonEffective={isNonEffective}
+            holidayData={holidayData}
+            printTemplate={printTemplate}
+            showSignature={showSignature}
+            counts={counts}
+            hadirList={hadirList}
+            sakitList={sakitList}
+            izinList={izinList}
+            cutiList={cutiList}
+            dlList={dlList}
+            alpaList={alpaList}
+            listTidakHadir={listTidakHadir}
+          />
+        </div>
       </PinchZoomView>
     </div>
   );

@@ -24,6 +24,7 @@
     "@capacitor/app": "^8.1.1",
     "@capacitor/core": "^8.4.2",
     "@capacitor/geolocation": "^8.2.0",
+    "@capgo/capacitor-printer": "^8.1.1",
     "@tailwindcss/vite": "^4.3.0",
     "@tinymce/tinymce-react": "^6.3.0",
     "exceljs": "^4.4.0",
