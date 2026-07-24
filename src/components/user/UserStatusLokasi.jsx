@@ -46,10 +46,10 @@ const STATUS_META = {
 
 export default function UserStatusLokasi({ settings }) {
   const navigate = useNavigate();
-  const [state, setState] = useState({ status: 'checking', message: '', detail: null });
+  const [state, setState] = useState({ status: 'checking', message: '', detail: null, rawError: null });
 
   const runCheck = useCallback(async () => {
-    setState({ status: 'checking', message: 'Memeriksa status GPS dan radius lokasi absensi Anda...', detail: null });
+    setState({ status: 'checking', message: 'Memeriksa status GPS dan radius lokasi absensi Anda...', detail: null, rawError: null });
 
     const geoLocations = settings?.geoLocations || [];
     const geoActive = settings?.geoFenceEnabled && geoLocations.length > 0;
@@ -76,6 +76,12 @@ export default function UserStatusLokasi({ settings }) {
           status: 'error',
           message: 'Gagal mendapatkan lokasi GPS. Pastikan sinyal GPS memadai (usahakan berada di area terbuka), lalu coba periksa kembali.',
           detail: null,
+          rawError: {
+            code: err?.nativeCode || err?.code,
+            message: err?.friendlyNativeMessage || err?.message,
+            lowAccuracyCode: err?.lowAccuracyNativeCode,
+            lowAccuracyMessage: err?.lowAccuracyNativeMessage,
+          },
         });
       }
       return;
@@ -142,6 +148,22 @@ export default function UserStatusLokasi({ settings }) {
                 <span className="text-slate-500">Titik Terdekat</span>
                 <span className="font-bold text-slate-800 text-right">{state.detail.nearest.name}</span>
               </div>
+            )}
+          </div>
+        )}
+
+        {state.rawError && (
+          <div className="mt-4 bg-slate-800 text-slate-100 rounded-2xl p-4 text-xs space-y-2 font-mono">
+            <h3 className="font-bold text-slate-300 uppercase mb-2 tracking-wide">Info Teknis (untuk laporan ke admin)</h3>
+            {state.rawError.code && (
+              <p><span className="text-slate-400">Kode:</span> {state.rawError.code}</p>
+            )}
+            <p><span className="text-slate-400">Pesan:</span> {state.rawError.message}</p>
+            {state.rawError.lowAccuracyCode && (
+              <>
+                <p className="pt-1"><span className="text-slate-400">Kode (fallback jaringan):</span> {state.rawError.lowAccuracyCode}</p>
+                <p><span className="text-slate-400">Pesan (fallback jaringan):</span> {state.rawError.lowAccuracyMessage}</p>
+              </>
             )}
           </div>
         )}
