@@ -16,6 +16,35 @@ const BODY_CAMERA_CLASS = 'native-camera-active';
 let webStream = null;
 let nativeActive = false;
 
+// Arah rotasi koreksi saat hasil capture native keluar landscape.
+// true = searah jarum jam (90° CW). Ubah ke false kalau wajah keluar terbalik arah.
+const ROTATE_CLOCKWISE = true;
+
+// Sebagian perangkat mengembalikan foto camera-preview dalam orientasi landscape
+// (ter-rotasi 90° dari sensor). Normalkan jadi portrait: kalau lebar > tinggi,
+// putar 90° lewat canvas. Kalau sudah portrait, kembalikan apa adanya.
+const normalizeToPortrait = (dataUrl) => new Promise((resolve) => {
+  const img = new Image();
+  img.onload = () => {
+    const w = img.naturalWidth;
+    const h = img.naturalHeight;
+    if (!w || !h || w <= h) {
+      resolve(dataUrl); // sudah portrait / tidak diketahui
+      return;
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = h;
+    canvas.height = w;
+    const ctx = canvas.getContext('2d');
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate((ROTATE_CLOCKWISE ? 1 : -1) * (Math.PI / 2));
+    ctx.drawImage(img, -w / 2, -h / 2);
+    resolve(canvas.toDataURL('image/jpeg', 0.9));
+  };
+  img.onerror = () => resolve(dataUrl);
+  img.src = dataUrl;
+});
+
 /**
  * Mulai kamera. Untuk web, isi videoEl.srcObject dengan stream.
  * @returns {Promise<{ mode: 'native' | 'web' }>}
@@ -34,6 +63,7 @@ export const startCamera = async ({ videoEl } = {}) => {
     });
     nativeActive = true;
     document.body.classList.add(BODY_CAMERA_CLASS);
+    document.documentElement.classList.add(BODY_CAMERA_CLASS);
     return { mode: 'native' };
   }
 
@@ -51,7 +81,10 @@ export const capturePhoto = async ({ videoEl, canvasEl } = {}) => {
   if (isNativePlatform()) {
     const result = await CameraPreview.capture({ quality: 85 });
     // Plugin mengembalikan base64 TANPA prefix data URL.
-    return result?.value ? `data:image/jpeg;base64,${result.value}` : null;
+    if (!result?.value) return null;
+    const dataUrl = `data:image/jpeg;base64,${result.value}`;
+    // Normalkan orientasi agar hasil tersimpan selalu portrait.
+    return await normalizeToPortrait(dataUrl);
   }
 
   if (videoEl && canvasEl) {
@@ -69,6 +102,7 @@ export const capturePhoto = async ({ videoEl, canvasEl } = {}) => {
 export const stopCamera = async ({ videoEl } = {}) => {
   if (nativeActive) {
     document.body.classList.remove(BODY_CAMERA_CLASS);
+    document.documentElement.classList.remove(BODY_CAMERA_CLASS);
     nativeActive = false;
     try {
       await CameraPreview.stop();

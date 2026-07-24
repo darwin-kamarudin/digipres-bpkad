@@ -18,11 +18,15 @@ button, a {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Saat preview kamera native (camera-preview, toBack) aktif, semua lapisan di atas
-   preview harus transparan agar kamera terlihat menembus webview.
+/* Saat preview kamera native (camera-preview, toBack) aktif, SELURUH rantai lapisan
+   di atas preview harus transparan agar kamera terlihat menembus webview — termasuk
+   html/body/#root dan kontainer shell aplikasi (App.jsx) yang default-nya bg-gray-50.
    Panel form putih (bg-white) tetap opak sehingga bagian bawah tetap solid. */
+html.native-camera-active,
 body.native-camera-active,
 body.native-camera-active #root,
+body.native-camera-active .app-shell,
+body.native-camera-active .app-content,
 body.native-camera-active .camera-screen,
 body.native-camera-active .camera-stage {
   background: transparent !important;
