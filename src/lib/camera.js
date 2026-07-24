@@ -17,8 +17,9 @@ let webStream = null;
 let nativeActive = false;
 
 // Arah rotasi koreksi saat hasil capture native keluar landscape.
-// true = searah jarum jam (90° CW). Ubah ke false kalau wajah keluar terbalik arah.
-const ROTATE_CLOCKWISE = true;
+// false = berlawanan jarum jam (90° CCW). Diuji di perangkat: CW membuat foto
+// terbalik 180° (atas jadi bawah), jadi CCW yang benar.
+const ROTATE_CLOCKWISE = false;
 
 // Sebagian perangkat mengembalikan foto camera-preview dalam orientasi landscape
 // (ter-rotasi 90° dari sensor). Normalkan jadi portrait: kalau lebar > tinggi,
