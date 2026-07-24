@@ -1,0 +1,37 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Fungsi cek login
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Aturan untuk Attendance
+    match /artifacts/{appId}/public/data/attendance/{docId} {
+      allow read, write: if isSignedIn();
+    }
+
+    // Aturan Status Locks (kunci status admin: Izin/Sakit/Cuti/Dinas Luar)
+    match /artifacts/{appId}/public/data/statusLocks/{docId} {
+      allow read, write: if isSignedIn();
+    }
+
+    // Aturan Users/Employees
+    // UBAH BAGIAN INI: Izinkan write (create, update, delete) jika user sudah login
+    match /artifacts/{appId}/public/data/users/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    // Aturan Settings
+    match /artifacts/{appId}/public/data/settings/{docId} {
+      allow read, write: if isSignedIn();
+    }
+
+    // Aturan Holidays
+    match /artifacts/{appId}/public/data/holidays/{docId} {
+      allow read, write: if isSignedIn();
+    }
+  }
+}

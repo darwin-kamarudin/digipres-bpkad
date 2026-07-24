@@ -53,6 +53,7 @@ backup
 android/app/build/
 android/build/
 android/.gradle/
+android/.kotlin/
 android/captures/
 android/local.properties
 android/app/src/main/assets/public/
