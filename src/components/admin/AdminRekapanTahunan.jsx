@@ -342,7 +342,7 @@ export default function AdminRekapanTahunan({ employees, settings, user, fetchAt
             <div className="flex gap-4 items-end flex-wrap">
                 <div>
                     <label className="text-xs font-bold block mb-1">Pilih Tahun</label>
-                    <select value={year} onChange={e=>setYear(e.target.value)} className="border p-2 rounded w-24 bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                    <select value={year} onChange={e=>setYear(e.target.value)} className="border p-2 rounded w-24 bg-white focus:ring-2 focus:ring-red-600 outline-none">
                        {yearsList.map(y => <option key={y} value={y}>{y}</option>)}
                     </select>
                 </div>
@@ -354,7 +354,7 @@ export default function AdminRekapanTahunan({ employees, settings, user, fetchAt
                       <div className="relative">
                           <input 
                               type="text" 
-                              className="border p-2 pl-9 pr-8 rounded w-64 bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                              className="border p-2 pl-9 pr-8 rounded w-64 bg-white focus:ring-2 focus:ring-red-600 outline-none transition-all"
                               placeholder="Ketik Nama / NIP / No..."
                               value={searchTerm}
                               onChange={(e) => {
@@ -375,7 +375,7 @@ export default function AdminRekapanTahunan({ employees, settings, user, fetchAt
                           <div className="absolute z-50 w-72 mt-1 bg-white border border-slate-200 rounded-lg shadow-xl max-h-64 overflow-y-auto">
                               {filteredEmployees.length > 0 ? (
                                   filteredEmployees.map(emp => (
-                                      <div key={emp.id} onClick={() => handleSelectEmployee(emp)} className={`p-2.5 cursor-pointer border-b border-slate-50 hover:bg-blue-50 ${selectedUserId === emp.id ? 'bg-blue-100' : ''}`}>
+                                      <div key={emp.id} onClick={() => handleSelectEmployee(emp)} className={`p-2.5 cursor-pointer border-b border-slate-50 hover:bg-red-50 ${selectedUserId === emp.id ? 'bg-red-100' : ''}`}>
                                           <div className="font-bold text-sm text-slate-800">{emp.no}. {emp.nama}</div>
                                           <div className="text-xs text-slate-500 flex justify-between"><span>NIP: {emp.nip || '-'}</span><span className="italic">{emp.jabatan}</span></div>
                                       </div>
@@ -407,8 +407,8 @@ export default function AdminRekapanTahunan({ employees, settings, user, fetchAt
 
           <div className="flex gap-6 border-t pt-3">
              <span className="text-xs font-bold text-slate-500 flex items-center">Opsi Tanda Tangan:</span>
-             <label className="flex items-center gap-2 cursor-pointer text-sm"><input type="checkbox" checked={showSecretary} onChange={(e) => setShowSecretary(e.target.checked)} className="rounded text-blue-600"/> TTD Sekretaris</label>
-             <label className="flex items-center gap-2 cursor-pointer text-sm"><input type="checkbox" checked={showLeader} onChange={(e) => setShowLeader(e.target.checked)} className="rounded text-blue-600"/> TTD Pimpinan</label>
+             <label className="flex items-center gap-2 cursor-pointer text-sm"><input type="checkbox" checked={showSecretary} onChange={(e) => setShowSecretary(e.target.checked)} className="rounded text-red-700"/> TTD Sekretaris</label>
+             <label className="flex items-center gap-2 cursor-pointer text-sm"><input type="checkbox" checked={showLeader} onChange={(e) => setShowLeader(e.target.checked)} className="rounded text-red-700"/> TTD Pimpinan</label>
           </div>
        </div>
 
@@ -429,7 +429,7 @@ export default function AdminRekapanTahunan({ employees, settings, user, fetchAt
               <div className="text-center mb-6">
                  <h2 className="text-xl font-bold uppercase underline">REKAPITULASI ABSENSI TAHUNAN</h2>
                  <p className="font-bold text-sm uppercase">PERIODE TAHUN: {year}</p>
-                 {isLoading && <p className="text-xs text-blue-500 animate-pulse mt-2">Sedang memuat data...</p>}
+                 {isLoading && <p className="text-xs text-red-600 animate-pulse mt-2">Sedang memuat data...</p>}
               </div>
 
               {/* INFO PEGAWAI */}

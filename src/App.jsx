@@ -48,17 +48,15 @@ function MainContent() {
   const isLandscape = LANDSCAPE_PRINT_PATHS.includes(location.pathname);
 
   return (
-    <div className="app-shell h-screen bg-gray-50 flex flex-col md:flex-row print:bg-white print:block print:h-auto text-slate-800 overflow-hidden font-sans">
+    <div className="app-shell h-screen bg-slate-100 flex flex-col md:flex-row print:bg-white print:block print:h-auto text-slate-800 overflow-hidden font-sans">
 
       <AppSidebar
         appUser={appUser}
         onLogout={onLogout}
-        settings={settings}
         isManagement={isManagement}
         isMobileMenuOpen={isMobileMenuOpen}
         setIsMobileMenuOpen={setIsMobileMenuOpen}
         isDesktopSidebarOpen={isDesktopSidebarOpen}
-        setIsDesktopSidebarOpen={setIsDesktopSidebarOpen}
       />
 
       {/* --- MAIN CONTENT WRAPPER --- */}
@@ -75,7 +73,7 @@ function MainContent() {
 
         {/* CONTENT AREA (ROUTER VIEW) */}
         {/* Staf (bukan manajemen) SELALU full-screen mobile, tanpa padding container di ukuran layar manapun */}
-        <div className={`app-content flex-1 overflow-y-auto ${!isManagement ? 'p-0' : 'p-4 md:p-8'} print:p-0 print:overflow-visible bg-gray-50`}>
+        <div className={`app-content flex-1 overflow-y-auto ${!isManagement ? 'p-0 bg-gray-50' : 'p-6 md:p-8 bg-slate-100'} print:p-0 print:overflow-visible`}>
             <PrintStyles isLandscape={isLandscape} />
 
             <AppRoutes

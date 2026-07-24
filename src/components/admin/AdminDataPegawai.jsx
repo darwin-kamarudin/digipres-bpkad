@@ -247,7 +247,7 @@ export default function AdminDataPegawai({ employees, currentUser }) {
                 </label>
                 
                 {/* Tombol Export Excel */}
-                <button onClick={handleExport} className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm flex items-center shadow-sm hover:bg-blue-700">
+                <button onClick={handleExport} className="bg-red-700 text-white px-3 py-1.5 rounded text-sm flex items-center shadow-sm hover:bg-red-800">
                    <FileSpreadsheet size={14} className="mr-1"/> Export Excel
                 </button>
              </div>
@@ -255,7 +255,7 @@ export default function AdminDataPegawai({ employees, currentUser }) {
         </div>
 
         {!isReadOnly && (
-          <div ref={formRef} className={`p-4 rounded mb-6 border-l-4 transition-colors ${isInserting ? 'bg-green-50 border-green-500' : 'bg-slate-50 border-blue-500'}`}>
+          <div ref={formRef} className={`p-4 rounded mb-6 border-l-4 transition-colors ${isInserting ? 'bg-green-50 border-green-500' : 'bg-slate-50 border-red-500'}`}>
             <h3 className="font-bold text-sm mb-3">{isEditing ? 'Edit Data' : isInserting ? 'Sisip Data' : 'Tambah Baru'}</h3>
             <form onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-12 gap-3">
                <div className="md:col-span-1">
@@ -302,7 +302,7 @@ export default function AdminDataPegawai({ employees, currentUser }) {
                
                <div className="md:col-span-12 flex gap-2 items-end justify-end">
                   <button type="button" onClick={()=>{setForm({ nama: '', nip: '', jabatan: '', statusPegawai: 'PNS', role: 'user', username: '', password: '', no: '' }); setIsEditing(null); setIsInserting(null);}} className="bg-gray-400 text-white py-2 px-4 rounded font-bold hover:bg-gray-500">Batal</button>
-                  <button disabled={isSaving} className="bg-blue-600 text-white py-2 px-6 rounded font-bold flex justify-center items-center hover:bg-blue-700 min-w-[100px]">
+                  <button disabled={isSaving} className="bg-red-700 text-white py-2 px-6 rounded font-bold flex justify-center items-center hover:bg-red-800 min-w-[100px]">
                      {isSaving ? <Loader className="animate-spin" size={16}/> : 'Simpan'}
                   </button>
                </div>
@@ -327,7 +327,7 @@ export default function AdminDataPegawai({ employees, currentUser }) {
               </thead>
               <tbody>
                  {sortedEmployees.map((emp) => (
-                    <tr key={emp.id} className={`hover:bg-slate-50 ${selectedIds.includes(emp.id) ? 'bg-blue-50' : ''}`}>
+                    <tr key={emp.id} className={`hover:bg-slate-50 ${selectedIds.includes(emp.id) ? 'bg-amber-50' : ''}`}>
                        {!isReadOnly && <td className="p-2 border text-center"><input type="checkbox" checked={selectedIds.includes(emp.id)} onChange={() => toggleSelectOne(emp.id)}/></td>}
                        <td className="p-2 border text-center font-bold">{emp.no}</td>
                        <td className="p-2 border font-mono text-slate-600">{emp.nip || '-'}</td>
@@ -351,7 +351,7 @@ export default function AdminDataPegawai({ employees, currentUser }) {
                        {!isReadOnly && (
                          <td className="p-2 border text-center flex justify-center gap-1">
                             <button onClick={()=>handleInsertClick(emp)} className="text-green-600 hover:bg-green-100 p-1 rounded" title="Sisip Data"><ArrowDownCircle size={16}/></button>
-                            <button onClick={()=>edit(emp)} className="text-blue-600 hover:bg-blue-100 p-1 rounded" title="Edit"><Edit size={16}/></button>
+                            <button onClick={()=>edit(emp)} className="text-amber-600 hover:bg-amber-100 p-1 rounded" title="Edit"><Edit size={16}/></button>
                             <button onClick={()=>remove(emp.id)} className="text-red-600 hover:bg-red-100 p-1 rounded" title="Hapus"><Trash2 size={16}/></button>
                          </td>
                        )}

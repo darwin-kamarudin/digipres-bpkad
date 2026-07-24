@@ -2,8 +2,8 @@ import React from 'react';
 import SidebarContent from './SidebarContent';
 
 export default function AppSidebar({
-  appUser, onLogout, settings, isManagement,
-  isMobileMenuOpen, setIsMobileMenuOpen, isDesktopSidebarOpen, setIsDesktopSidebarOpen,
+  appUser, onLogout, isManagement,
+  isMobileMenuOpen, setIsMobileMenuOpen, isDesktopSidebarOpen,
 }) {
   return (
     <>
@@ -27,9 +27,6 @@ export default function AppSidebar({
          <SidebarContent
             user={appUser}
             onLogout={onLogout}
-            settings={settings}
-            isDesktopSidebarOpen={isDesktopSidebarOpen}
-            setIsDesktopSidebarOpen={setIsDesktopSidebarOpen}
             setIsMobileMenuOpen={setIsMobileMenuOpen}
          />
       </div>

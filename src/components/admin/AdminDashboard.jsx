@@ -27,7 +27,7 @@ export default function AdminDashboard({ employees, attendance, statusLocks = []
        <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
              <h1 className="text-2xl font-bold text-slate-800">Dashboard Statistik</h1>
-             <p className="text-slate-500">Ringkasan Data Absensi: <span className="font-bold text-blue-600">{session}</span></p>
+             <p className="text-slate-500">Ringkasan Data Absensi: <span className="font-bold text-amber-600">{session}</span></p>
           </div>
           <div className="flex items-center gap-4">
              <div className="flex items-center gap-2 bg-white p-2 rounded shadow-sm border">
@@ -46,11 +46,11 @@ export default function AdminDashboard({ employees, attendance, statusLocks = []
 
        {/* CARD STATISTICS */}
        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-gradient-to-r from-blue-600 to-blue-500 p-6 rounded-xl shadow-lg text-white relative overflow-hidden">
+          <div className="bg-gradient-to-r from-amber-600 to-amber-500 p-6 rounded-xl shadow-lg text-white relative overflow-hidden">
              <div className="relative z-10">
                 <div className="flex justify-between items-center mb-4">
-                   <h3 className="font-bold text-blue-100 uppercase text-xs tracking-wider">Total Pegawai</h3>
-                   <Users className="text-blue-200" size={24}/>
+                   <h3 className="font-bold text-amber-100 uppercase text-xs tracking-wider">Total Pegawai</h3>
+                   <Users className="text-amber-200" size={24}/>
                 </div>
                 <p className="text-4xl font-bold">{counts.TotalPegawai}</p>
              </div>

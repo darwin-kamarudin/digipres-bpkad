@@ -117,7 +117,7 @@ export default function AdminManajemenAbsensi({ employees, statusLocks = [] }) {
       {/* PANEL FORM KUNCI STATUS */}
       <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-xl border border-slate-100 p-4 sm:p-6">
         <div className="flex items-center gap-4 mb-6">
-          <div className="p-3 bg-gradient-to-br from-indigo-50 to-blue-100 text-indigo-600 rounded-xl shadow-inner border border-indigo-100/50">
+          <div className="p-3 bg-gradient-to-br from-red-50 to-amber-100 text-red-700 rounded-xl shadow-inner border border-red-100/50">
             <Lock size={26} strokeWidth={2.5} />
           </div>
           <div>
@@ -127,7 +127,7 @@ export default function AdminManajemenAbsensi({ employees, statusLocks = [] }) {
         </div>
 
         {/* Info perilaku buka kunci otomatis */}
-        <div className="flex items-start gap-3 mb-5 p-4 bg-blue-50/70 border border-blue-100 rounded-2xl text-sm text-blue-800">
+        <div className="flex items-start gap-3 mb-5 p-4 bg-amber-50/70 border border-amber-100 rounded-2xl text-sm text-amber-800">
           <Info size={18} className="flex-shrink-0 mt-0.5" />
           <p>
             Pegawai yang <b>tidak absen</b> dan tidak dikunci akan otomatis dihitung <b>Alpa</b>.
@@ -140,19 +140,19 @@ export default function AdminManajemenAbsensi({ employees, statusLocks = [] }) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 p-5 bg-slate-50/70 rounded-2xl border border-slate-100">
             <div>
               <label className="block text-sm font-semibold text-slate-600 mb-1.5 flex items-center gap-2">
-                <CheckSquare size={16} className="text-indigo-400" /> Status Dikunci
+                <CheckSquare size={16} className="text-red-400" /> Status Dikunci
               </label>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className="w-full p-2.5 border-2 border-indigo-200 bg-indigo-50/50 rounded-xl outline-none font-semibold text-indigo-700"
+                className="w-full p-2.5 border-2 border-red-200 bg-red-50/50 rounded-xl outline-none font-semibold text-red-700"
               >
                 {LOCKABLE_STATUS.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
             <div>
               <label className="block text-sm font-semibold text-slate-600 mb-1.5 flex items-center gap-2">
-                <CalendarRange size={16} className="text-indigo-400" /> Tanggal Mulai
+                <CalendarRange size={16} className="text-red-400" /> Tanggal Mulai
               </label>
               <input
                 type="date"
@@ -167,7 +167,7 @@ export default function AdminManajemenAbsensi({ employees, statusLocks = [] }) {
             </div>
             <div>
               <label className="block text-sm font-semibold text-slate-600 mb-1.5 flex items-center gap-2">
-                <CalendarRange size={16} className="text-indigo-400" /> Tanggal Selesai
+                <CalendarRange size={16} className="text-red-400" /> Tanggal Selesai
               </label>
               <input
                 type="date"
@@ -202,9 +202,9 @@ export default function AdminManajemenAbsensi({ employees, statusLocks = [] }) {
               >
                 {filteredEmployees.length > 0 && filteredEmployees.every(e => selectedIds.includes(e.id)) ? 'Batal Pilih Semua' : 'Pilih Semua'}
               </button>
-              <div className="flex flex-col items-center px-4 py-1.5 rounded-xl bg-indigo-50 border border-indigo-100">
-                <span className="text-xs text-indigo-400 font-medium">Terpilih</span>
-                <span className="text-sm font-bold text-indigo-700 leading-tight">{selectedIds.length}</span>
+              <div className="flex flex-col items-center px-4 py-1.5 rounded-xl bg-red-50 border border-red-100">
+                <span className="text-xs text-red-400 font-medium">Terpilih</span>
+                <span className="text-sm font-bold text-red-700 leading-tight">{selectedIds.length}</span>
               </div>
             </div>
           </div>
@@ -226,15 +226,15 @@ export default function AdminManajemenAbsensi({ employees, statusLocks = [] }) {
                     <tr
                       key={emp.id}
                       onClick={() => toggleSelect(emp.id)}
-                      className={`cursor-pointer transition-all ${isSelected ? 'bg-indigo-50/60 shadow-[inset_4px_0_0_0_#6366f1]' : 'hover:bg-slate-50'}`}
+                      className={`cursor-pointer transition-all ${isSelected ? 'bg-red-50/60 shadow-[inset_4px_0_0_0_#b91c1c]' : 'hover:bg-slate-50'}`}
                     >
                       <td className="p-4 text-center">
                         {isSelected
-                          ? <CheckSquare size={20} className="text-indigo-600 mx-auto" />
+                          ? <CheckSquare size={20} className="text-red-700 mx-auto" />
                           : <Square size={20} className="text-slate-300 mx-auto" />}
                       </td>
                       <td className="p-4">
-                        <div className={`font-bold ${isSelected ? 'text-indigo-700' : 'text-slate-700'}`}>{emp.nama}</div>
+                        <div className={`font-bold ${isSelected ? 'text-red-700' : 'text-slate-700'}`}>{emp.nama}</div>
                         <div className="text-xs text-slate-500 mt-1">{emp.nip ? `NIP: ${emp.nip}` : 'NIP: -'}</div>
                       </td>
                       <td className="p-4 text-slate-500 truncate hidden md:table-cell">{emp.jabatan || '-'}</td>
@@ -257,7 +257,7 @@ export default function AdminManajemenAbsensi({ employees, statusLocks = [] }) {
           <button
             type="submit"
             disabled={isSubmitting || selectedIds.length === 0}
-            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 to-blue-600 text-white p-4 rounded-xl font-bold hover:from-indigo-700 hover:to-blue-700 transition-all disabled:from-slate-300 disabled:to-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed shadow-lg"
+            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-red-700 to-amber-600 text-white p-4 rounded-xl font-bold hover:from-red-800 hover:to-amber-700 transition-all disabled:from-slate-300 disabled:to-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed shadow-lg"
           >
             <Save size={20} />
             {isSubmitting ? 'Menyimpan...' : `Kunci Status "${status}" (${selectedIds.length} Pegawai)`}
@@ -268,7 +268,7 @@ export default function AdminManajemenAbsensi({ employees, statusLocks = [] }) {
       {/* DAFTAR KUNCI AKTIF */}
       <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-4 sm:p-6">
         <h3 className="text-lg font-bold text-slate-800 mb-1 flex items-center gap-2">
-          <Lock size={18} className="text-indigo-500" /> Kunci Status Aktif & Akan Datang
+          <Lock size={18} className="text-red-600" /> Kunci Status Aktif & Akan Datang
         </h3>
         <p className="text-sm text-slate-500 mb-4">Daftar kunci yang masih berlaku (belum lewat). Buka kunci untuk membatalkannya.</p>
 

@@ -67,7 +67,7 @@ const TabButton = ({ id, label, activeTab, onClick }) => (
   <button 
     onClick={() => onClick(id)} 
     className={`px-6 py-3 font-bold text-sm transition-colors border-b-2 whitespace-nowrap
-      ${activeTab === id ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-400 hover:text-slate-600'}
+      ${activeTab === id ? 'border-red-700 text-red-700' : 'border-transparent text-slate-400 hover:text-slate-600'}
     `}
   >
     {label}
@@ -109,44 +109,44 @@ function TabSetup({ settings, isReadOnly }) {
         <div className="space-y-4">
              <div>
                 <label className="font-bold text-xs uppercase block mb-1 text-slate-500">Nama OPD (Lengkap)</label>
-                <input disabled={isReadOnly} className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100" value={form.opdName} onChange={e=>setForm({...form, opdName: e.target.value})}/>
+                <input disabled={isReadOnly} className="w-full border p-2 rounded focus:ring-2 focus:ring-red-600 outline-none disabled:bg-gray-100" value={form.opdName} onChange={e=>setForm({...form, opdName: e.target.value})}/>
              </div>
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label className="font-bold text-xs uppercase block mb-1 text-slate-500">Nama Pendek / Singkatan</label>
-                    <input disabled={isReadOnly} className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100" value={form.opdShort} onChange={e=>setForm({...form, opdShort: e.target.value})}/>
+                    <input disabled={isReadOnly} className="w-full border p-2 rounded focus:ring-2 focus:ring-red-600 outline-none disabled:bg-gray-100" value={form.opdShort} onChange={e=>setForm({...form, opdShort: e.target.value})}/>
                 </div>
                 <div>
                     <label className="font-bold text-xs uppercase block mb-1 text-slate-500">Instansi Induk (Pemkab)</label>
-                    <input disabled={isReadOnly} className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100" value={form.parentAgency} onChange={e=>setForm({...form, parentAgency: e.target.value})}/>
+                    <input disabled={isReadOnly} className="w-full border p-2 rounded focus:ring-2 focus:ring-red-600 outline-none disabled:bg-gray-100" value={form.parentAgency} onChange={e=>setForm({...form, parentAgency: e.target.value})}/>
                 </div>
              </div>
              <div>
                 <label className="font-bold text-xs uppercase block mb-1 text-slate-500">Alamat Kantor</label>
-                <textarea disabled={isReadOnly} className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100" rows={2} value={form.address} onChange={e=>setForm({...form, address: e.target.value})}/>
+                <textarea disabled={isReadOnly} className="w-full border p-2 rounded focus:ring-2 focus:ring-red-600 outline-none disabled:bg-gray-100" rows={2} value={form.address} onChange={e=>setForm({...form, address: e.target.value})}/>
              </div>
         </div>
         
         {/* DATA PIMPINAN */}
-        <div className="bg-blue-50 p-5 rounded-lg border border-blue-200 shadow-sm">
-             <h3 className="font-bold text-sm text-blue-800 mb-4 uppercase flex items-center border-b border-blue-200 pb-2">
+        <div className="bg-amber-50 p-5 rounded-lg border border-amber-200 shadow-sm">
+             <h3 className="font-bold text-sm text-amber-800 mb-4 uppercase flex items-center border-b border-amber-200 pb-2">
                 <UserCheck className="mr-2" size={18}/> Data Pimpinan (Penandatangan Laporan)
              </h3>
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label className="font-bold text-[10px] uppercase block mb-1 text-blue-900">Nama Pimpinan</label>
+                    <label className="font-bold text-[10px] uppercase block mb-1 text-amber-900">Nama Pimpinan</label>
                     <input disabled={isReadOnly} className="w-full border p-2 rounded disabled:bg-gray-100" value={form.kepalaName || ''} onChange={e=>setForm({...form, kepalaName: e.target.value})}/>
                 </div>
                 <div>
-                    <label className="font-bold text-[10px] uppercase block mb-1 text-blue-900">NIP</label>
+                    <label className="font-bold text-[10px] uppercase block mb-1 text-amber-900">NIP</label>
                     <input disabled={isReadOnly} className="w-full border p-2 rounded disabled:bg-gray-100" value={form.kepalaNip || ''} onChange={e=>setForm({...form, kepalaNip: e.target.value})}/>
                 </div>
                 <div>
-                    <label className="font-bold text-[10px] uppercase block mb-1 text-blue-900">Jabatan Pimpinan</label>
+                    <label className="font-bold text-[10px] uppercase block mb-1 text-amber-900">Jabatan Pimpinan</label>
                     <input disabled={isReadOnly} className="w-full border p-2 rounded disabled:bg-gray-100" value={form.kepalaJabatan || ''} onChange={e=>setForm({...form, kepalaJabatan: e.target.value})}/>
                 </div>
                 <div>
-                    <label className="font-bold text-[10px] uppercase block mb-1 text-blue-900">Titimangsa (Tempat Ttd)</label>
+                    <label className="font-bold text-[10px] uppercase block mb-1 text-amber-900">Titimangsa (Tempat Ttd)</label>
                     <input disabled={isReadOnly} className="w-full border p-2 rounded disabled:bg-gray-100" value={form.titimangsa || 'Bobong'} onChange={e=>setForm({...form, titimangsa: e.target.value})}/>
                 </div>
              </div>
@@ -172,7 +172,7 @@ function TabSetup({ settings, isReadOnly }) {
 
         {!isReadOnly && (
             <div className="pt-4 border-t">
-                <button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg shadow-lg font-bold flex items-center">
+                <button onClick={handleSave} className="bg-red-700 hover:bg-red-800 text-white px-8 py-3 rounded-lg shadow-lg font-bold flex items-center">
                     <Save size={18} className="mr-2"/> Simpan Pengaturan
                 </button>
             </div>
@@ -221,7 +221,7 @@ function TabTimeSettings({ settings, isReadOnly }) {
 
     return (
         <div className="max-w-3xl space-y-6 animate-in fade-in duration-300">
-            <div className="bg-blue-50 border-l-4 border-blue-500 p-4 text-sm text-blue-700">
+            <div className="bg-amber-50 border-l-4 border-amber-500 p-4 text-sm text-amber-700">
                 <p className="font-bold flex items-center"><Clock className="mr-2" size={16}/> Panduan Waktu Absensi</p>
                 <p className="mt-1">Atur zona waktu kantor dan jam operasional absensi untuk sesi Pagi dan Sore.</p>
             </div>
@@ -233,7 +233,7 @@ function TabTimeSettings({ settings, isReadOnly }) {
                     <label className="font-bold text-xs uppercase block mb-1 text-slate-500">Pilih Zona Waktu</label>
                     <select 
                         disabled={isReadOnly}
-                        className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none bg-white font-medium text-sm"
+                        className="w-full border p-2 rounded focus:ring-2 focus:ring-red-600 outline-none bg-white font-medium text-sm"
                         value={form.zonaWaktu} 
                         onChange={e=>setForm({...form, zonaWaktu: e.target.value})}
                     >
@@ -261,7 +261,7 @@ function TabTimeSettings({ settings, isReadOnly }) {
                             <input
                                 type="time"
                                 disabled={isReadOnly}
-                                className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 font-mono"
+                                className="w-full border p-2 rounded focus:ring-2 focus:ring-red-600 outline-none disabled:bg-gray-100 font-mono"
                                 value={form.jamMasukAwal}
                                 onChange={e=>setForm({...form, jamMasukAwal: e.target.value})}
                             />
@@ -271,7 +271,7 @@ function TabTimeSettings({ settings, isReadOnly }) {
                             <input
                                 type="time"
                                 disabled={isReadOnly}
-                                className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 font-mono"
+                                className="w-full border p-2 rounded focus:ring-2 focus:ring-red-600 outline-none disabled:bg-gray-100 font-mono"
                                 value={form.batasAbsenPagi}
                                 onChange={e=>setForm({...form, batasAbsenPagi: e.target.value})}
                             />
@@ -292,7 +292,7 @@ function TabTimeSettings({ settings, isReadOnly }) {
                             <input
                                 type="time"
                                 disabled={isReadOnly}
-                                className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 font-mono"
+                                className="w-full border p-2 rounded focus:ring-2 focus:ring-red-600 outline-none disabled:bg-gray-100 font-mono"
                                 value={form.jamSiangAwal}
                                 onChange={e=>setForm({...form, jamSiangAwal: e.target.value})}
                             />
@@ -302,7 +302,7 @@ function TabTimeSettings({ settings, isReadOnly }) {
                             <input
                                 type="time"
                                 disabled={isReadOnly}
-                                className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 font-mono"
+                                className="w-full border p-2 rounded focus:ring-2 focus:ring-red-600 outline-none disabled:bg-gray-100 font-mono"
                                 value={form.batasAbsenSiang}
                                 onChange={e=>setForm({...form, batasAbsenSiang: e.target.value})}
                             />
@@ -314,7 +314,7 @@ function TabTimeSettings({ settings, isReadOnly }) {
                 {/* SESI SORE */}
                 <div className="border p-5 rounded-lg bg-slate-50 shadow-sm">
                     <h3 className="font-bold text-slate-800 border-b pb-2 mb-4 flex items-center">
-                        <span className="w-2 h-6 bg-blue-500 mr-2 rounded"></span>
+                        <span className="w-2 h-6 bg-red-600 mr-2 rounded"></span>
                         Sesi Sore (Check Out)
                     </h3>
                     <div className="space-y-4">
@@ -323,7 +323,7 @@ function TabTimeSettings({ settings, isReadOnly }) {
                             <input
                                 type="time"
                                 disabled={isReadOnly}
-                                className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 font-mono"
+                                className="w-full border p-2 rounded focus:ring-2 focus:ring-red-600 outline-none disabled:bg-gray-100 font-mono"
                                 value={form.jamPulangAwal}
                                 onChange={e=>setForm({...form, jamPulangAwal: e.target.value})}
                             />
@@ -333,7 +333,7 @@ function TabTimeSettings({ settings, isReadOnly }) {
                             <input
                                 type="time"
                                 disabled={isReadOnly}
-                                className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 font-mono"
+                                className="w-full border p-2 rounded focus:ring-2 focus:ring-red-600 outline-none disabled:bg-gray-100 font-mono"
                                 value={form.batasAbsenSore}
                                 onChange={e=>setForm({...form, batasAbsenSore: e.target.value})}
                             />
@@ -345,7 +345,7 @@ function TabTimeSettings({ settings, isReadOnly }) {
 
             {!isReadOnly && (
                 <div className="pt-4 border-t">
-                    <button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg shadow-lg font-bold flex items-center">
+                    <button onClick={handleSave} className="bg-red-700 hover:bg-red-800 text-white px-8 py-3 rounded-lg shadow-lg font-bold flex items-center">
                         <Save size={18} className="mr-2"/> Simpan Pengaturan
                     </button>
                 </div>
@@ -442,7 +442,7 @@ function TabGeoLocation({ settings, isReadOnly }) {
 
     return (
         <div className="max-w-5xl space-y-6 animate-in fade-in duration-300">
-            <div className="bg-blue-50 border-l-4 border-blue-500 p-4 text-sm text-blue-700">
+            <div className="bg-amber-50 border-l-4 border-amber-500 p-4 text-sm text-amber-700">
                 <p className="font-bold flex items-center"><MapPin className="mr-2" size={16}/> Panduan Geo Lokasi Absensi</p>
                 <p className="mt-1">Klik pada peta untuk menentukan titik lokasi, atur radius, lalu simpan. Pegawai hanya bisa melakukan absensi jika berada di dalam radius salah satu titik yang terdaftar.</p>
             </div>
@@ -536,7 +536,7 @@ function TabGeoLocation({ settings, isReadOnly }) {
                                 <td className="p-3 text-center">
                                     {!isReadOnly && (
                                         <div className="flex justify-center gap-1">
-                                            <button onClick={()=>handleEditLocation(loc)} className="text-blue-600 hover:bg-blue-100 p-1.5 rounded border border-blue-200"><Edit size={16}/></button>
+                                            <button onClick={()=>handleEditLocation(loc)} className="text-amber-600 hover:bg-amber-100 p-1.5 rounded border border-amber-200"><Edit size={16}/></button>
                                             <button onClick={()=>handleDeleteLocation(loc.id)} className="text-red-500 hover:bg-red-100 p-1.5 rounded border border-red-200"><Trash2 size={16}/></button>
                                         </div>
                                     )}
@@ -549,7 +549,7 @@ function TabGeoLocation({ settings, isReadOnly }) {
 
             {!isReadOnly && (
                 <div className="pt-2">
-                    <button onClick={handleSaveAll} className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg shadow-lg font-bold flex items-center">
+                    <button onClick={handleSaveAll} className="bg-red-700 hover:bg-red-800 text-white px-8 py-3 rounded-lg shadow-lg font-bold flex items-center">
                         <Save size={18} className="mr-2"/> Simpan Pengaturan Geo Lokasi
                     </button>
                 </div>
@@ -589,7 +589,7 @@ function TabModeAplikasi({ settings, isReadOnly }) {
 
     return (
         <div className="max-w-3xl space-y-6 animate-in fade-in duration-300">
-            <div className="bg-blue-50 border-l-4 border-blue-500 p-4 text-sm text-blue-700">
+            <div className="bg-amber-50 border-l-4 border-amber-500 p-4 text-sm text-amber-700">
                 <p className="font-bold flex items-center"><Smartphone className="mr-2" size={16}/> Panduan Mode Aplikasi</p>
                 <p className="mt-1">Jika "Wajib Aplikasi Mobile" diaktifkan, pegawai TIDAK bisa lagi melakukan absensi lewat browser/web — mereka wajib memakai aplikasi mobile resmi (dibuild dengan Capacitor). Menu lain (rekapan, riwayat, dsb) tetap bisa diakses lewat web seperti biasa.</p>
             </div>
@@ -614,8 +614,8 @@ function TabModeAplikasi({ settings, isReadOnly }) {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className={`border rounded-lg p-4 flex items-start gap-3 ${!mobileOnlyAbsensi ? 'border-blue-300 bg-blue-50' : 'border-slate-200 bg-slate-50 opacity-60'}`}>
-                    <Globe size={20} className="text-blue-600 mt-0.5 flex-shrink-0"/>
+                <div className={`border rounded-lg p-4 flex items-start gap-3 ${!mobileOnlyAbsensi ? 'border-amber-300 bg-amber-50' : 'border-slate-200 bg-slate-50 opacity-60'}`}>
+                    <Globe size={20} className="text-amber-600 mt-0.5 flex-shrink-0"/>
                     <div>
                         <p className="font-bold text-sm text-slate-800">Web / Browser</p>
                         <p className="text-xs text-slate-500 mt-1">{!mobileOnlyAbsensi ? 'Diizinkan untuk absensi.' : 'Diblokir untuk absensi.'}</p>
@@ -632,7 +632,7 @@ function TabModeAplikasi({ settings, isReadOnly }) {
 
             {!isReadOnly && (
                 <div className="pt-2">
-                    <button onClick={handleSave} disabled={saving} className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg shadow-lg font-bold flex items-center disabled:opacity-50">
+                    <button onClick={handleSave} disabled={saving} className="bg-red-700 hover:bg-red-800 text-white px-8 py-3 rounded-lg shadow-lg font-bold flex items-center disabled:opacity-50">
                         <Save size={18} className="mr-2"/> {saving ? 'Menyimpan...' : 'Simpan Pengaturan Mode Aplikasi'}
                     </button>
                 </div>
@@ -797,13 +797,13 @@ function TabHolidays({ holidays, isReadOnly }) {
                <div className="flex flex-col md:flex-row gap-2">
                   <input 
                     type="date" 
-                    className="border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" 
+                    className="border p-2 rounded focus:ring-2 focus:ring-red-600 outline-none" 
                     value={holForm.date} 
                     onChange={e=>setHolForm({...holForm, date: e.target.value})}
                   />
                   <input 
                     placeholder="Keterangan (Misal: HUT RI ke-80)" 
-                    className="border p-2 rounded flex-1 focus:ring-2 focus:ring-blue-500 outline-none" 
+                    className="border p-2 rounded flex-1 focus:ring-2 focus:ring-red-600 outline-none" 
                     value={holForm.desc} 
                     onChange={e=>setHolForm({...holForm, desc: e.target.value})}
                   />
@@ -877,7 +877,7 @@ function TabHolidays({ holidays, isReadOnly }) {
                     {holidays.length === 0 && <tr><td colSpan={isReadOnly ? 3 : 4} className="p-4 text-center italic text-gray-500">Belum ada data hari libur.</td></tr>}
                     
                     {holidays.sort((a,b) => a.date.localeCompare(b.date)).map(h => (
-                       <tr key={h.id} className={`hover:bg-slate-50 transition-colors ${editingId === h.id ? 'bg-yellow-50' : ''} ${selectedIds.includes(h.id) ? 'bg-blue-50' : ''}`}>
+                       <tr key={h.id} className={`hover:bg-slate-50 transition-colors ${editingId === h.id ? 'bg-yellow-50' : ''} ${selectedIds.includes(h.id) ? 'bg-amber-50' : ''}`}>
                           {!isReadOnly && (
                               <td className="p-3 text-center">
                                   <input 
@@ -895,7 +895,7 @@ function TabHolidays({ holidays, isReadOnly }) {
                           <td className="p-3 text-center flex justify-center gap-1">
                               {!isReadOnly && (
                                   <>
-                                    <button onClick={()=>editHol(h)} className="text-blue-600 hover:bg-blue-100 p-1.5 rounded transition-colors border border-blue-200" title="Edit">
+                                    <button onClick={()=>editHol(h)} className="text-amber-600 hover:bg-amber-100 p-1.5 rounded transition-colors border border-amber-200" title="Edit">
                                         <Edit size={16}/>
                                     </button>
                                     <button onClick={()=>delHol(h.id)} className="text-red-500 hover:bg-red-100 p-1.5 rounded transition-colors border border-red-200" title="Hapus">
@@ -964,22 +964,22 @@ function TabUserManagement({ employees, user, settings, isReadOnly }) {
          {/* SECTION 1: FORM TAMBAH USER SISTEM (Khusus Admin) */}
          <div className="print:hidden">
              {!isReadOnly && user.role === 'admin' && (
-                 <div className="bg-blue-50 p-5 mb-8 rounded-lg border border-blue-200 shadow-sm">
-                     <h3 className="font-bold text-sm text-blue-800 mb-4 uppercase flex items-center border-b border-blue-200 pb-2">
+                 <div className="bg-amber-50 p-5 mb-8 rounded-lg border border-amber-200 shadow-sm">
+                     <h3 className="font-bold text-sm text-amber-800 mb-4 uppercase flex items-center border-b border-amber-200 pb-2">
                          <Plus className="mr-2" size={16}/> Tambah User Sistem (Non-Pegawai)
                      </h3>
                      <form onSubmit={handleAddSystemUser} className="grid grid-cols-1 md:grid-cols-6 gap-4 text-xs">
                          <div className="col-span-2">
                              <label className="font-bold block mb-1">Nama Lengkap</label>
-                             <input className="w-full border p-2 rounded focus:ring-1 focus:ring-blue-500" placeholder="Nama..." value={newUserForm.nama} onChange={e=>setNewUserForm({...newUserForm, nama: e.target.value})} />
+                             <input className="w-full border p-2 rounded focus:ring-1 focus:ring-red-600" placeholder="Nama..." value={newUserForm.nama} onChange={e=>setNewUserForm({...newUserForm, nama: e.target.value})} />
                          </div>
                          <div className="col-span-2">
                              <label className="font-bold block mb-1">Username Login</label>
-                             <input className="w-full border p-2 rounded focus:ring-1 focus:ring-blue-500" placeholder="Username..." value={newUserForm.username} onChange={e=>setNewUserForm({...newUserForm, username: e.target.value})} />
+                             <input className="w-full border p-2 rounded focus:ring-1 focus:ring-red-600" placeholder="Username..." value={newUserForm.username} onChange={e=>setNewUserForm({...newUserForm, username: e.target.value})} />
                          </div>
                          <div className="col-span-2">
                              <label className="font-bold block mb-1">Password</label>
-                             <input className="w-full border p-2 rounded focus:ring-1 focus:ring-blue-500" placeholder="Password..." value={newUserForm.password} onChange={e=>setNewUserForm({...newUserForm, password: e.target.value})} />
+                             <input className="w-full border p-2 rounded focus:ring-1 focus:ring-red-600" placeholder="Password..." value={newUserForm.password} onChange={e=>setNewUserForm({...newUserForm, password: e.target.value})} />
                          </div>
                          <div className="col-span-2">
                              <label className="font-bold block mb-1">Hak Akses (Role)</label>
@@ -994,7 +994,7 @@ function TabUserManagement({ employees, user, settings, isReadOnly }) {
                              <input className="w-full border p-2 rounded" placeholder="Jabatan..." value={newUserForm.jabatan} onChange={e=>setNewUserForm({...newUserForm, jabatan: e.target.value})} />
                          </div>
                          <div className="col-span-3 flex items-end">
-                             <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded font-bold transition-colors shadow">TAMBAH USER BARU</button>
+                             <button className="w-full bg-red-700 hover:bg-red-800 text-white py-2 rounded font-bold transition-colors shadow">TAMBAH USER BARU</button>
                          </div>
                      </form>
                  </div>
@@ -1002,13 +1002,13 @@ function TabUserManagement({ employees, user, settings, isReadOnly }) {
 
              {/* SECTION 2: TABEL USER SISTEM */}
              <div className="mb-10">
-                <div className="bg-indigo-50 p-3 text-sm text-indigo-900 rounded-t-lg border-x border-t border-indigo-200 flex items-center font-bold">
+                <div className="bg-slate-800 p-3 text-sm text-white rounded-t-lg border-x border-t border-slate-800 flex items-center font-bold">
                     <Shield className="mr-2" size={16}/>
                     <span>Daftar User Sistem (Admin / Operator / Pengelola)</span>
                 </div>
-                <div className="overflow-x-auto border-x border-b border-indigo-200 rounded-b-lg shadow-sm">
+                <div className="overflow-x-auto border-x border-b border-slate-200 rounded-b-lg shadow-sm">
                     <table className="w-full text-sm">
-                       <thead className="bg-indigo-100 text-indigo-900">
+                       <thead className="bg-slate-100 text-slate-800">
                           <tr>
                              <th className="p-3 text-left">Nama</th>
                              <th className="p-3 text-left">Role (Hak Akses)</th>
@@ -1122,15 +1122,15 @@ function UserRow({ targetUser, currentUser, onSave, onDelete, isReadOnly }) {
    };
 
    return (
-      <tr className={`hover:bg-slate-50 transition-colors ${targetUser.id === currentUser.id ? 'bg-blue-50' : ''}`}>
+      <tr className={`hover:bg-slate-50 transition-colors ${targetUser.id === currentUser.id ? 'bg-amber-50' : ''}`}>
          <td className="p-3">
             <div className="font-bold text-slate-700">{targetUser.nama}</div>
-            {targetUser.id === currentUser.id && <span className="text-[10px] bg-blue-600 text-white px-1.5 py-0.5 rounded font-bold inline-block mt-1">AKUN SAYA</span>}
+            {targetUser.id === currentUser.id && <span className="text-[10px] bg-red-700 text-white px-1.5 py-0.5 rounded font-bold inline-block mt-1">AKUN SAYA</span>}
             {targetUser.role !== 'user' && <div className="text-[10px] text-gray-500 italic mt-0.5">{targetUser.jabatan}</div>}
          </td>
          <td className="p-3">
             {canEditRole ? (
-                <select className="border p-1.5 rounded w-full text-xs font-bold uppercase bg-white focus:ring-1 focus:ring-blue-500 outline-none" value={r} onChange={e=>handleChange('r', e.target.value)}>
+                <select className="border p-1.5 rounded w-full text-xs font-bold uppercase bg-white focus:ring-1 focus:ring-red-600 outline-none" value={r} onChange={e=>handleChange('r', e.target.value)}>
                     <option value="user">USER (Pegawai)</option>
                     <option value="operator">OPERATOR</option>
                     <option value="pengelola">PENGELOLA</option>
@@ -1147,7 +1147,7 @@ function UserRow({ targetUser, currentUser, onSave, onDelete, isReadOnly }) {
          </td>
          <td className="p-3">
             <input 
-               className={`border p-1.5 rounded w-full font-mono text-xs ${!canEdit ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white focus:ring-1 focus:ring-blue-500 outline-none'}`} 
+               className={`border p-1.5 rounded w-full font-mono text-xs ${!canEdit ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white focus:ring-1 focus:ring-red-600 outline-none'}`} 
                value={u} 
                onChange={e=>handleChange('u', e.target.value)}
                disabled={!canEdit}
@@ -1155,7 +1155,7 @@ function UserRow({ targetUser, currentUser, onSave, onDelete, isReadOnly }) {
          </td>
          <td className="p-3">
             <input 
-               className={`border p-1.5 rounded w-full font-mono text-xs ${!canEdit ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white focus:ring-1 focus:ring-blue-500 outline-none'}`} 
+               className={`border p-1.5 rounded w-full font-mono text-xs ${!canEdit ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white focus:ring-1 focus:ring-red-600 outline-none'}`} 
                value={showPassword ? p : '******'} 
                onChange={e=>handleChange('p', e.target.value)}
                disabled={!canEdit}

@@ -336,7 +336,7 @@ export default function AdminRekapanBulanan({ employees, settings, user, holiday
       <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 space-y-4 print-hidden">
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-2">
-                <div className="bg-blue-100 p-2 rounded-lg text-blue-600"><Calendar size={20} /></div>
+                <div className="bg-red-100 p-2 rounded-lg text-red-700"><Calendar size={20} /></div>
                 <div><h2 className="font-bold text-slate-800">Rekapan Bulanan</h2></div>
             </div>
             <div className="flex flex-wrap gap-2 items-center">
@@ -367,15 +367,15 @@ export default function AdminRekapanBulanan({ employees, settings, user, holiday
             </div>
         </div>
 
-        <div className="border-t pt-4 flex gap-6 items-center bg-blue-50 p-3 rounded">
-            <div className="flex items-center gap-2 text-sm font-bold text-blue-800">
+        <div className="border-t pt-4 flex gap-6 items-center bg-amber-50 p-3 rounded">
+            <div className="flex items-center gap-2 text-sm font-bold text-amber-800">
                 <UserCheck size={18}/> <span>Opsi Tanda Tangan:</span>
             </div>
             <label className="flex items-center gap-2 cursor-pointer text-sm select-none">
-                <input type="checkbox" checked={showSecretary} onChange={(e) => setShowSecretary(e.target.checked)} className="rounded text-blue-600"/> TTD Sekretaris
+                <input type="checkbox" checked={showSecretary} onChange={(e) => setShowSecretary(e.target.checked)} className="rounded text-red-700"/> TTD Sekretaris
             </label>
             <label className="flex items-center gap-2 cursor-pointer text-sm select-none">
-                <input type="checkbox" checked={showLeader} onChange={(e) => setShowLeader(e.target.checked)} className="rounded text-blue-600"/> TTD Pimpinan
+                <input type="checkbox" checked={showLeader} onChange={(e) => setShowLeader(e.target.checked)} className="rounded text-red-700"/> TTD Pimpinan
             </label>
         </div>
       </div>
@@ -398,7 +398,7 @@ export default function AdminRekapanBulanan({ employees, settings, user, holiday
                 <p className="font-bold text-sm uppercase mt-1">
                     BULAN: {monthName.toUpperCase()} {selectedYear}
                 </p>
-                {isLoading && <p className="text-xs text-blue-500 animate-pulse mt-2">Sedang memuat data terbaru...</p>}
+                {isLoading && <p className="text-xs text-red-600 animate-pulse mt-2">Sedang memuat data terbaru...</p>}
             </div>
 
             {/* Tabel (Menggunakan reportData) */}

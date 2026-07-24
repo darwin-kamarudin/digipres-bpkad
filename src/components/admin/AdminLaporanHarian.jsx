@@ -71,7 +71,7 @@ export default function AdminLaporanHarian({ employees, attendance, statusLocks 
                             type="checkbox" 
                             checked={showSignature} 
                             onChange={(e) => setShowSignature(e.target.checked)}
-                            className="w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                            className="w-5 h-5 text-red-700 rounded border-gray-300 focus:ring-red-600"
                         />
                         <span className="text-sm font-bold text-slate-700">TTD Pimpinan</span>
                     </label>
