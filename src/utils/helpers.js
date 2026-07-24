@@ -136,12 +136,11 @@ export const adjustTimezone = (date, zone) => {
 
 export const HEADER_TITLES = {
   '/': 'Dashboard',
-  '/input-absensi': 'Input Absensi',
+  '/manajemen-absensi': 'Manajemen Absensi',
   '/laporan-harian': 'Laporan Harian',
   '/laporan-bulanan': 'Rekapan Bulanan',
   '/rekapan-tahunan': 'Rekapan Tahunan',
   '/cetak-manual': 'Cetak Manual',
-  '/verifikasi-absensi': 'Verifikasi Absensi',
   '/data-pegawai': 'Data Pegawai',
   '/settings': 'Pengaturan',
   '/absensi-mandiri': 'Absensi Mandiri',

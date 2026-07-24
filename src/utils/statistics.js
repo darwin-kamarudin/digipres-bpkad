@@ -1,8 +1,81 @@
+// ==========================================================================
+// KUNCI STATUS ADMIN (statusLocks)
+// --------------------------------------------------------------------------
+// Admin mengunci status (Izin/Sakit/Cuti/Dinas Luar) untuk pegawai pada
+// RENTANG tanggal. Kunci disimpan sebagai { userId, status, startDate, endDate }.
+//
+// Saat rekap dihitung, kunci "dimaterialkan" jadi record semu berbentuk seperti
+// attendance. Absensi NYATA pegawai SELALU menang per (userId,date,session) —
+// inilah mekanisme "buka kunci otomatis": begitu pegawai absen mandiri (Hadir),
+// record aslinya menutupi record-semu kunci di hari/sesi itu.
+// ==========================================================================
+
+const LOCK_SESSIONS = ['Pagi', 'Sore'];
+
+// Daftar tanggal (YYYY-MM-DD) inklusif antara startDate..endDate.
+const eachDateInRange = (startDate, endDate) => {
+  const out = [];
+  if (!startDate || !endDate || startDate > endDate) return out;
+  const d = new Date(`${startDate}T00:00:00`);
+  const end = new Date(`${endDate}T00:00:00`);
+  while (d <= end) {
+    out.push(d.toISOString().slice(0, 10));
+    d.setDate(d.getDate() + 1);
+  }
+  return out;
+};
+
+// Materialkan kunci -> record semu (berbentuk seperti attendance), dibatasi
+// irisan [rangeStart, rangeEnd] agar tidak membangkitkan tanggal berlebihan.
+export const expandLocksToRecords = (locks = [], rangeStart, rangeEnd) => {
+  const records = [];
+  locks.forEach((lock) => {
+    if (!lock?.userId || !lock?.status || !lock?.startDate || !lock?.endDate) return;
+    const start = rangeStart && lock.startDate < rangeStart ? rangeStart : lock.startDate;
+    const end = rangeEnd && lock.endDate > rangeEnd ? rangeEnd : lock.endDate;
+    eachDateInRange(start, end).forEach((dateStr) => {
+      LOCK_SESSIONS.forEach((session) => {
+        records.push({
+          id: `lock_${lock.userId}_${dateStr}_${session}`,
+          userId: lock.userId,
+          status: lock.status,
+          session,
+          date: dateStr,
+          statusApproval: 'approved',
+          fromLock: true,
+        });
+      });
+    });
+  });
+  return records;
+};
+
+// Gabungkan attendance nyata dengan record-semu kunci. Absensi nyata menang.
+export const mergeAttendanceWithLocks = (attendance = [], locks = [], rangeStart, rangeEnd) => {
+  const pseudo = expandLocksToRecords(locks, rangeStart, rangeEnd);
+  if (pseudo.length === 0) return attendance;
+  const attKeys = new Set(attendance.map((a) => `${a.userId}_${a.date}_${a.session}`));
+  const extra = pseudo.filter((p) => !attKeys.has(`${p.userId}_${p.date}_${p.session}`));
+  return [...attendance, ...extra];
+};
+
+// Batas akhir bulan (YYYY-MM -> YYYY-MM-DD hari terakhir).
+const monthRange = (month) => {
+  const [y, m] = month.split('-').map(Number);
+  const lastDay = new Date(y, m, 0).getDate();
+  return { start: `${month}-01`, end: `${month}-${String(lastDay).padStart(2, '0')}` };
+};
+
+// ==========================================================================
+// STATISTIK
+// ==========================================================================
+
 // Fungsi untuk Menghitung Statistik Harian (Dashboard & Laporan Harian)
-export const getDailyStats = (date, session, employees, attendance) => {
-    // 1. Ambil data absensi yang valid (approved) sesuai tanggal & sesi
-    const logs = attendance.filter(l => l.date === date && l.session === session && l.statusApproval === 'approved');
-    
+export const getDailyStats = (date, session, employees, attendance, statusLocks = []) => {
+    // 1. Gabungkan absensi nyata + kunci admin (absensi menang) untuk tanggal ini
+    const merged = mergeAttendanceWithLocks(attendance, statusLocks, date, date);
+    const logs = merged.filter(l => l.date === date && l.session === session && l.statusApproval === 'approved');
+
     // 2. Ambil hanya pegawai dengan role 'user'
     const pegawaiOnly = employees.filter(e => e.role === 'user');
 
@@ -13,7 +86,7 @@ export const getDailyStats = (date, session, employees, attendance) => {
       Izin: [],
       Cuti: [],
       'Dinas Luar': [],
-      Alpa: [] 
+      Alpa: []
     };
 
     const recordedIds = new Set();
@@ -29,7 +102,7 @@ export const getDailyStats = (date, session, employees, attendance) => {
       }
     });
 
-    // 5. Cari pegawai yang Alpa (tidak ada di log absensi)
+    // 5. Cari pegawai yang Alpa (tidak ada di log absensi & tidak dikunci admin)
     grouped.Alpa = pegawaiOnly.filter(e => !recordedIds.has(e.id));
 
     // 6. Hitung ringkasan angka
@@ -50,10 +123,14 @@ export const getDailyStats = (date, session, employees, attendance) => {
 };
 
 // Fungsi untuk Menghitung Statistik Bulanan per User (Rekapan Bulanan)
-export const getMonthlyStats = (month, attendance) => {
-    // 1. Filter semua log di bulan tersebut
-    const monthlyLogs = attendance.filter(l => l.date.startsWith(month) && l.statusApproval === 'approved');
-    
+// CATATAN: bila `attendance` sudah digabung dengan kunci (mis. hasil
+// fetchAttendanceByRange), biarkan statusLocks kosong agar tidak dobel.
+export const getMonthlyStats = (month, attendance, statusLocks = []) => {
+    // 1. Gabungkan + filter semua log di bulan tersebut
+    const { start, end } = monthRange(month);
+    const merged = mergeAttendanceWithLocks(attendance, statusLocks, start, end);
+    const monthlyLogs = merged.filter(l => l.date.startsWith(month) && l.statusApproval === 'approved');
+
     // 2. Fungsi helper untuk menghitung detail per user
     const calculateUserStats = (userId) => {
          const userLogs = monthlyLogs.filter(l => l.userId === userId);
@@ -66,9 +143,9 @@ export const getMonthlyStats = (month, attendance) => {
         };
 
         userLogs.forEach(log => {
-            const status = log.status; 
-            const session = log.session; 
-            
+            const status = log.status;
+            const session = log.session;
+
             if (stats[status]) {
                 if (session === 'Pagi') stats[status].p += 1;
                 else if (session === 'Sore') stats[status].s += 1;
@@ -81,12 +158,15 @@ export const getMonthlyStats = (month, attendance) => {
 };
 
 // Fungsi Baru: Statistik Tahunan per User (Rekapan Tahunan)
-export const getYearlyStats = (year, attendance, userId) => {
-    // 1. Filter logs untuk tahun tertentu & user tertentu
+// CATATAN: sama seperti bulanan — bila `attendance` sudah tergabung kunci,
+// biarkan statusLocks kosong agar tidak dobel.
+export const getYearlyStats = (year, attendance, userId, statusLocks = []) => {
+    // 1. Gabungkan + filter logs untuk tahun tertentu & user tertentu
     const yearPrefix = `${year}-`;
-    const userLogs = attendance.filter(l => 
-        l.userId === userId && 
-        l.date.startsWith(yearPrefix) && 
+    const merged = mergeAttendanceWithLocks(attendance, statusLocks, `${year}-01-01`, `${year}-12-31`);
+    const userLogs = merged.filter(l =>
+        l.userId === userId &&
+        l.date.startsWith(yearPrefix) &&
         l.statusApproval === 'approved'
     );
 
@@ -102,7 +182,7 @@ export const getYearlyStats = (year, attendance, userId) => {
     const statsByMonth = months.map(m => {
         // Ambil log bulan ini
         const currentMonthLogs = userLogs.filter(l => l.date.startsWith(`${year}-${m.id}`));
-        
+
         const stats = {
             Hadir: { p: 0, s: 0 },
             Sakit: { p: 0, s: 0 },
@@ -112,7 +192,7 @@ export const getYearlyStats = (year, attendance, userId) => {
         };
 
         currentMonthLogs.forEach(log => {
-             const status = log.status; 
+             const status = log.status;
              const session = log.session;
              if (stats[status]) {
                 if (session === 'Pagi') stats[status].p += 1;

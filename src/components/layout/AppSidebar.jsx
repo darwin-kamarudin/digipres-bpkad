@@ -2,7 +2,7 @@ import React from 'react';
 import SidebarContent from './SidebarContent';
 
 export default function AppSidebar({
-  appUser, onLogout, settings, pendingCount, isManagement,
+  appUser, onLogout, settings, isManagement,
   isMobileMenuOpen, setIsMobileMenuOpen, isDesktopSidebarOpen, setIsDesktopSidebarOpen,
 }) {
   return (
@@ -28,7 +28,6 @@ export default function AppSidebar({
             user={appUser}
             onLogout={onLogout}
             settings={settings}
-            pendingCount={pendingCount}
             isDesktopSidebarOpen={isDesktopSidebarOpen}
             setIsDesktopSidebarOpen={setIsDesktopSidebarOpen}
             setIsMobileMenuOpen={setIsMobileMenuOpen}

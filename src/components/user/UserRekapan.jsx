@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Printer } from 'lucide-react';
 import { getTodayString, getWeekNumber, formatDateIndo, DEFAULT_LOGO_URL } from '../../utils/helpers';
+import { mergeAttendanceWithLocks } from '../../utils/statistics';
 import MobileHeader from './MobileHeader';
 
-export default function UserRekapan({ user, attendance, settings, employees = [] }) {
+export default function UserRekapan({ user, attendance, statusLocks = [], settings, employees = [] }) {
    const navigate = useNavigate();
    const [viewMode, setViewMode] = useState('bulanan');
    const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
@@ -21,7 +22,12 @@ export default function UserRekapan({ user, attendance, settings, employees = []
    );
 
    // --- LOGIKA FILTER DATA ---
-   const filteredLogs = attendance.filter(l => {
+   // Gabungkan absensi mandiri dengan kunci status admin (Izin/Sakit/Cuti/DL).
+   // Absensi mandiri menang -> hari yang diabsen tampil Hadir (buka kunci otomatis).
+   const rangeYear = (viewMode === 'bulanan' ? month : week).slice(0, 4);
+   const mergedLogs = mergeAttendanceWithLocks(attendance, statusLocks, `${rangeYear}-01-01`, `${rangeYear}-12-31`);
+
+   const filteredLogs = mergedLogs.filter(l => {
       const isUser = l.userId === user.id && l.statusApproval === 'approved';
       if(!isUser) return false;
       if(viewMode === 'bulanan') return l.date.startsWith(month);

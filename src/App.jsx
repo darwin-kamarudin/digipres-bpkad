@@ -18,7 +18,7 @@ const LANDSCAPE_PRINT_PATHS = ['/cetak-manual', '/rekapan-tahunan'];
 // === KOMPONEN UTAMA (YANG DIBUNGKUS ROUTER) ===
 function MainContent() {
   const {
-    appUser, employees, attendance, pendingAbsensi, settings, holidays, loading,
+    appUser, employees, attendance, statusLocks, settings, holidays, loading,
     biometricLoginEnabled, handleAppLogin, handleAppLogout, handleBiometricLogin,
     setBiometricLoginEnabled, fetchAttendanceByRange
   } = useAppData();
@@ -45,7 +45,6 @@ function MainContent() {
   );
 
   const isManagement = MANAGEMENT_ROLES.includes(appUser.role);
-  const pendingCount = pendingAbsensi ? pendingAbsensi.length : 0;
   const isLandscape = LANDSCAPE_PRINT_PATHS.includes(location.pathname);
 
   return (
@@ -55,7 +54,6 @@ function MainContent() {
         appUser={appUser}
         onLogout={onLogout}
         settings={settings}
-        pendingCount={pendingCount}
         isManagement={isManagement}
         isMobileMenuOpen={isMobileMenuOpen}
         setIsMobileMenuOpen={setIsMobileMenuOpen}
@@ -85,7 +83,7 @@ function MainContent() {
               appUser={appUser}
               employees={employees}
               attendance={attendance}
-              pendingAbsensi={pendingAbsensi}
+              statusLocks={statusLocks}
               settings={settings}
               holidays={holidays}
               fetchAttendanceByRange={fetchAttendanceByRange}

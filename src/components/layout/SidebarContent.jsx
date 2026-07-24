@@ -6,11 +6,10 @@ import {
   BarChart3, Sliders, PanelLeftClose, X, MapPinCheck
 } from 'lucide-react';
 
-export default function SidebarContent({ 
-  user, 
-  onLogout, 
-  settings, 
-  pendingCount,
+export default function SidebarContent({
+  user,
+  onLogout,
+  settings,
   isDesktopSidebarOpen,
   setIsDesktopSidebarOpen,
   setIsMobileMenuOpen
@@ -115,8 +114,7 @@ export default function SidebarContent({
                
                {/* MENU TUNGGAL */}
                <div className="animate-in fade-in slide-in-from-left-2 duration-300 space-y-2">
-                  <NavItem path="/verifikasi-absensi" icon={FileCheck} label="Verifikasi Absensi" badge={pendingCount} />
-                  <NavItem path="/input-absensi" icon={CheckSquare} label="Input Absensi" />
+                  <NavItem path="/manajemen-absensi" icon={CheckSquare} label="Manajemen Absensi" />
                </div>
 
                {/* GRUP REKAPAN ABSENSI */}

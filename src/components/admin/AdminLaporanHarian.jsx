@@ -3,7 +3,7 @@ import { Printer, AlertTriangle } from 'lucide-react';
 import { getTodayString, formatDateIndo, formatDateNoWeekday, DEFAULT_LOGO_URL } from '../../utils/helpers';
 import { getDailyStats } from '../../utils/statistics'; // Import Logic Baru
 
-export default function AdminLaporanHarian({ employees, attendance, settings, holidays, isUserView = false }) {
+export default function AdminLaporanHarian({ employees, attendance, statusLocks = [], settings, holidays, isUserView = false }) {
   const [date, setDate] = useState(getTodayString());
   const [session, setSession] = useState(() => {
      const h = new Date().getHours();
@@ -19,7 +19,7 @@ export default function AdminLaporanHarian({ employees, attendance, settings, ho
   const isNonEffective = isWeekend || !!holidayData;
 
   // --- GUNAKAN LOGIC TERPUSAT ---
-  const { grouped, counts } = getDailyStats(date, session, employees, attendance);
+  const { grouped, counts } = getDailyStats(date, session, employees, attendance, statusLocks);
 
   // Sorting Khusus untuk Laporan (Hadir berdasarkan No, Sisanya Default/Nama)
   const hadirList = grouped.Hadir.sort((a, b) => (parseInt(a.no) || 99999) - (parseInt(b.no) || 99999));

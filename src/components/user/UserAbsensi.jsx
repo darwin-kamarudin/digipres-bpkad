@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, Lock, CheckCircle, RefreshCw, Camera, ChevronLeft, Home, MapPin, ShieldAlert, Smartphone } from 'lucide-react';
-import { addDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { getCollectionPath } from '../../lib/firebase';
 import { getTodayString, formatDateIndo, fetchServerTime, adjustTimezone, getDeviceType } from '../../utils/helpers';
 import { getCurrentPosition, findNearestGeoFence, isNativePlatform } from '../../lib/geolocation';
@@ -218,12 +218,19 @@ export default function UserAbsensi({ user, attendance, holidays, settings }) {
      if (!confirm('Kirim data absensi sekarang?')) return;
 
      try {
-        await addDoc(getCollectionPath('attendance'), {
+        // ID deterministik: 1 sesi = 1 dokumen. Absensi mandiri MENIMPA kunci status
+        // admin (jika ada) -> otomatis berubah jadi Hadir (buka kunci).
+        const docId = `${form.date}_${form.session}_${user.id}`;
+        await setDoc(doc(getCollectionPath('attendance'), docId), {
             ...form,
+            status: 'Hadir', // Pegawai hanya bisa menandai kehadiran (Hadir)
             userId: user.id,
             userName: user.nama,
+            nama: user.nama,
+            nip: user.nip || '',
             photoData: photo, // Menyimpan Base64
-            statusApproval: 'pending',
+            statusApproval: 'approved', // Absensi tercatat otomatis, tanpa verifikasi admin
+            adminInput: false,
             timestamp: new Date().toISOString(),
             serverTimestamp: serverTimestamp(),
             device: getDeviceType(),
@@ -419,16 +426,6 @@ export default function UserAbsensi({ user, attendance, holidays, settings }) {
               <form onSubmit={submit} className="space-y-4">
                 {showCamera && (
                     <>
-                    <div>
-                        <label className="font-bold block mb-1 text-sm text-slate-600">Keterangan Kehadiran</label>
-                        <select className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-slate-50 font-semibold text-slate-700" value={form.status} onChange={e=>setForm({...form, status: e.target.value})}>
-                            <option value="Hadir">Hadir</option>
-                            <option value="Sakit">Sakit</option>
-                            <option value="Izin">Izin</option>
-                            <option value="Cuti">Cuti</option>
-                            <option value="Dinas Luar">Dinas Luar (DL)</option>
-                        </select>
-                    </div>
                     <div>
                         <label className="font-bold block mb-1 text-sm text-slate-600">Mode Kerja</label>
                         <div className="grid grid-cols-2 gap-2">

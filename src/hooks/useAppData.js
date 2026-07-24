@@ -10,6 +10,7 @@ import {
 import { auth, getCollectionPath } from '../lib/firebase';
 import { INITIAL_SETTINGS } from '../utils/helpers';
 import { saveSession, loadSession, clearSession } from '../lib/localDb';
+import { mergeAttendanceWithLocks } from '../utils/statistics';
 
 export const useAppData = () => {
   const [firebaseUser, setFirebaseUser] = useState(null);
@@ -17,7 +18,7 @@ export const useAppData = () => {
 
   const [employees, setEmployees] = useState([]);
   const [attendance, setAttendance] = useState([]); // Optimasi: Hanya data bulan ini
-  const [pendingAbsensi, setPendingAbsensi] = useState([]); // Baru: Khusus data pending (semua tanggal)
+  const [statusLocks, setStatusLocks] = useState([]); // Kunci status admin (Izin/Sakit/Cuti/DL) rentang tanggal
   const [settings, setSettings] = useState(INITIAL_SETTINGS);
   const [holidays, setHolidays] = useState([]);
 
@@ -117,19 +118,12 @@ export const useAppData = () => {
       setAttendance(data);
     }, (error) => console.error("Err Attendance:", error));
 
-    // D. Pending Absensi (KHUSUS APPROVAL: Semua tanggal yang pending)
-    // Ini menjamin data pending bulan lalu tetap muncul di AdminTerimaAbsensi
-    const pendingQuery = query(
-      getCollectionPath('attendance'),
-      where('statusApproval', '==', 'pending')
-    );
-
-    const unsubPending = onSnapshot(pendingQuery, (snap) => {
+    // D. Status Locks (Kunci status admin: Izin/Sakit/Cuti/DL untuk rentang tanggal)
+    // Dipakai rekap untuk menetapkan status pegawai yang tidak absen mandiri.
+    const unsubLocks = onSnapshot(getCollectionPath('statusLocks'), (snap) => {
       const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      // Sort pending berdasarkan waktu kirim terbaru
-      data.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
-      setPendingAbsensi(data);
-    }, (error) => console.error("Err Pending:", error));
+      setStatusLocks(data);
+    }, (error) => console.error("Err StatusLocks:", error));
 
     // E. Holidays
     const unsubHol = onSnapshot(getCollectionPath('holidays'), (snap) => {
@@ -137,23 +131,39 @@ export const useAppData = () => {
     }, (error) => console.error("Err Holidays:", error));
 
     // Membersihkan listener ketika user logout
-    return () => { 
-      unsubAtt(); 
-      unsubPending(); 
-      unsubHol(); 
+    return () => {
+      unsubAtt();
+      unsubLocks();
+      unsubHol();
     };
   }, [appUser]); // <--- Hook ini sekarang bergantung pada status appUser (login)
 
   // --- Helper Fetch Manual (Untuk Rekapan Bulanan/Tahunan) ---
+  // Mengembalikan attendance nyata pada rentang, DIGABUNG dengan record-semu dari
+  // kunci status admin yang beririsan (absensi nyata menang). Dengan begitu komponen
+  // rekap cukup memproses satu array seperti biasa tanpa tahu soal kunci.
   const fetchAttendanceByRange = async (startDate, endDate) => {
     try {
-      const q = query(
+      const attQ = query(
         getCollectionPath('attendance'),
         where('date', '>=', startDate),
         where('date', '<=', endDate)
       );
-      const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const attSnap = await getDocs(attQ);
+      const attData = attSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      // Ambil kunci yang beririsan dengan rentang: endDate kunci >= startDate rentang,
+      // lalu saring startDate kunci <= endDate rentang di klien.
+      const lockQ = query(
+        getCollectionPath('statusLocks'),
+        where('endDate', '>=', startDate)
+      );
+      const lockSnap = await getDocs(lockQ);
+      const lockData = lockSnap.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(l => l.startDate <= endDate);
+
+      return mergeAttendanceWithLocks(attData, lockData, startDate, endDate);
     } catch (error) {
       console.error("Error fetching range:", error);
       return [];
@@ -207,7 +217,7 @@ export const useAppData = () => {
     appUser,
     employees,
     attendance,      // Data bulan ini (untuk dashboard & laporan harian)
-    pendingAbsensi,  // Data pending (untuk halaman verifikasi)
+    statusLocks,     // Kunci status admin (untuk rekap & status efektif)
     settings,
     holidays,
     loading,

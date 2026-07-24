@@ -3,15 +3,15 @@ import { Users, UserCheck, XCircle, Activity, FileText, Calendar, Briefcase } fr
 import { getTodayString, DEFAULT_LOGO_URL } from '../../utils/helpers';
 import { getDailyStats } from '../../utils/statistics'; // Import Logic Baru
 
-export default function AdminDashboard({ employees, attendance, settings }) {
+export default function AdminDashboard({ employees, attendance, statusLocks = [], settings }) {
   const [date, setDate] = useState(getTodayString());
   const [session, setSession] = useState(() => {
      const h = new Date().getHours();
      return h >= 12 ? 'Sore' : 'Pagi';
   });
 
-  // GUNAKAN LOGIC TERPUSAT
-  const { counts } = getDailyStats(date, session, employees, attendance);
+  // GUNAKAN LOGIC TERPUSAT (dengan kunci status admin)
+  const { counts } = getDailyStats(date, session, employees, attendance, statusLocks);
 
   return (
     <div className="p-2 md:p-6 animate-in fade-in duration-500">

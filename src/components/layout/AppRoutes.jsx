@@ -3,10 +3,9 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 
 // === KOMPONEN ADMIN ===
 import AdminDashboard from '../admin/AdminDashboard';
-import AdminInputAbsensi from '../admin/AdminInputAbsensi';
+import AdminManajemenAbsensi from '../admin/AdminManajemenAbsensi';
 import AdminLaporanHarian from '../admin/AdminLaporanHarian';
 import AdminRekapanBulanan from '../admin/AdminRekapanBulanan';
-import AdminTerimaAbsensi from '../admin/AdminTerimaAbsensi';
 import AdminDataPegawai from '../admin/AdminDataPegawai';
 import AdminSettings from '../admin/AdminSettings';
 import AdminCetakAbsensiManual from '../admin/AdminCetakAbsensiManual';
@@ -21,17 +20,16 @@ import UserPengaturan from '../user/UserPengaturan';
 import UserStatusLokasi from '../user/UserStatusLokasi';
 
 export default function AppRoutes({
-  isManagement, appUser, employees, attendance, pendingAbsensi, settings, holidays,
+  isManagement, appUser, employees, attendance, statusLocks, settings, holidays,
   fetchAttendanceByRange, onLogout, biometricLoginEnabled, onSetBiometricLoginEnabled,
 }) {
   return (
     <Routes>
         {isManagement ? (
             <>
-                <Route path="/" element={<AdminDashboard employees={employees} attendance={attendance} settings={settings} />} />
-                <Route path="/verifikasi-absensi" element={<AdminTerimaAbsensi employees={employees} pendingAbsensi={pendingAbsensi} />} />
-                <Route path="/input-absensi" element={<AdminInputAbsensi employees={employees} attendance={attendance} />} />
-                <Route path="/laporan-harian" element={<AdminLaporanHarian employees={employees} attendance={attendance} settings={settings} holidays={holidays} />} />
+                <Route path="/" element={<AdminDashboard employees={employees} attendance={attendance} statusLocks={statusLocks} settings={settings} />} />
+                <Route path="/manajemen-absensi" element={<AdminManajemenAbsensi employees={employees} statusLocks={statusLocks} />} />
+                <Route path="/laporan-harian" element={<AdminLaporanHarian employees={employees} attendance={attendance} statusLocks={statusLocks} settings={settings} holidays={holidays} />} />
                 <Route path="/laporan-bulanan" element={<AdminRekapanBulanan employees={employees} attendance={attendance} settings={settings} user={appUser} holidays={holidays} fetchAttendanceByRange={fetchAttendanceByRange} />} />
                 <Route path="/rekapan-tahunan" element={<AdminRekapanTahunan employees={employees} attendance={attendance} settings={settings} fetchAttendanceByRange={fetchAttendanceByRange} />} />
                 <Route path="/cetak-manual" element={<AdminCetakAbsensiManual employees={employees} settings={settings} holidays={holidays} />} />
@@ -46,7 +44,7 @@ export default function AppRoutes({
                 <Route path="/absensi-mandiri" element={<UserAbsensi user={appUser} attendance={attendance} holidays={holidays} settings={settings} />} />
                 <Route path="/riwayat-absensi" element={<UserRiwayat user={appUser} attendance={attendance} />} />
                 <Route path="/status-lokasi" element={<UserStatusLokasi settings={settings} />} />
-                <Route path="/laporan-bulanan" element={<UserRekapan user={appUser} attendance={attendance} settings={settings} employees={employees} />} />
+                <Route path="/laporan-bulanan" element={<UserRekapan user={appUser} attendance={attendance} statusLocks={statusLocks} settings={settings} employees={employees} />} />
                 <Route path="/pengaturan" element={<UserPengaturan user={appUser} onLogout={onLogout} biometricLoginEnabled={biometricLoginEnabled} onSetBiometricLoginEnabled={onSetBiometricLoginEnabled} />} />
             </>
         )}
