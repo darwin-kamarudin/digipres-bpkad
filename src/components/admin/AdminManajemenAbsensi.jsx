@@ -3,6 +3,7 @@ import { Save, CalendarRange, Search, CheckSquare, Square, Lock, Trash2, Info, U
 import { writeBatch, doc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db, getCollectionPath } from '../../lib/firebase';
 import { getTodayString, formatDateIndo } from '../../utils/helpers';
+import InfoBannerCarousel from './InfoBannerCarousel';
 
 // Status yang bisa DIKUNCI admin. Hadir tidak termasuk (itu hasil absensi mandiri),
 // begitu pula Alpa (otomatis untuk yang tak absen & tak dikunci).
@@ -26,11 +27,20 @@ export default function AdminManajemenAbsensi({ employees, statusLocks = [] }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // userId yang sedang punya kunci aktif/akan datang (belum lewat). Selama
+  // masih terkunci, pegawai ini SENGAJA disembunyikan dari daftar pilih —
+  // admin wajib buka kunci lama dulu sebelum bisa membuat kunci status baru,
+  // supaya tidak terjadi kunci ganda/tumpang tindih untuk pegawai yang sama.
+  const lockedUserIds = useMemo(() => {
+    const today = getTodayString();
+    return new Set(statusLocks.filter(l => l.endDate >= today).map(l => l.userId));
+  }, [statusLocks]);
+
   const userEmployees = useMemo(() => {
     return employees
-      .filter(e => e.role === 'user')
+      .filter(e => e.role === 'user' && !lockedUserIds.has(e.id))
       .sort((a, b) => a.nama.localeCompare(b.nama));
-  }, [employees]);
+  }, [employees, lockedUserIds]);
 
   const filteredEmployees = useMemo(() => {
     if (!searchTerm) return userEmployees;
@@ -126,15 +136,28 @@ export default function AdminManajemenAbsensi({ employees, statusLocks = [] }) {
           </div>
         </div>
 
-        {/* Info perilaku buka kunci otomatis */}
-        <div className="flex items-start gap-3 mb-5 p-4 bg-amber-50/70 border border-amber-100 rounded-2xl text-sm text-amber-800">
-          <Info size={18} className="flex-shrink-0 mt-0.5" />
-          <p>
-            Pegawai yang <b>tidak absen</b> dan tidak dikunci akan otomatis dihitung <b>Alpa</b>.
-            Jika pegawai yang dikunci melakukan <b>absensi mandiri</b>, statusnya otomatis berubah
-            menjadi <b>Hadir</b> pada hari itu (kunci terbuka otomatis).
-          </p>
-        </div>
+        {/* Info perilaku buka kunci otomatis + peringatan kunci ganda, digabung 1 slot bergeser */}
+        <InfoBannerCarousel
+          items={[
+            <div key="auto-unlock" className="flex items-start gap-3 p-4 bg-amber-50/70 border border-amber-100 rounded-2xl text-sm text-amber-800 h-full">
+              <Info size={18} className="flex-shrink-0 mt-0.5" />
+              <p>
+                Pegawai yang <b>tidak absen</b> dan tidak dikunci akan otomatis dihitung <b>Alpa</b>.
+                Jika pegawai yang dikunci melakukan <b>absensi mandiri</b>, statusnya otomatis berubah
+                menjadi <b>Hadir</b> pada hari itu (kunci terbuka otomatis).
+              </p>
+            </div>,
+            ...(lockedUserIds.size > 0 ? [
+              <div key="locked-hidden" className="flex items-start gap-3 p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm text-slate-600 h-full">
+                <Lock size={18} className="flex-shrink-0 mt-0.5" />
+                <p>
+                  <b>{lockedUserIds.size} pegawai</b> disembunyikan dari daftar di bawah karena sudah punya kunci status aktif.
+                  Buka kunci lama dulu (di daftar "Kunci Status Aktif & Akan Datang") sebelum membuat kunci baru untuk pegawai tersebut.
+                </p>
+              </div>
+            ] : []),
+          ]}
+        />
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 p-5 bg-slate-50/70 rounded-2xl border border-slate-100">

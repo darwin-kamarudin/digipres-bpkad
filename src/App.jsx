@@ -11,6 +11,9 @@ import AppSidebar from './components/layout/AppSidebar';
 import AppHeader from './components/layout/AppHeader';
 import AppRoutes from './components/layout/AppRoutes';
 import PrintStyles from './components/layout/PrintStyles';
+import AdminMobileShell from './components/admin-mobile/AdminMobileShell';
+import { isNativePlatform } from './lib/geolocation';
+import useIsMobileViewport from './hooks/useIsMobileViewport';
 
 const MANAGEMENT_ROLES = ['admin', 'operator', 'pengelola'];
 const LANDSCAPE_PRINT_PATHS = ['/cetak-manual', '/rekapan-tahunan'];
@@ -25,6 +28,7 @@ function MainContent() {
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true);
+  const isMobileViewport = useIsMobileViewport();
 
   const location = useLocation();
 
@@ -46,6 +50,34 @@ function MainContent() {
 
   const isManagement = MANAGEMENT_ROLES.includes(appUser.role);
   const isLandscape = LANDSCAPE_PRINT_PATHS.includes(location.pathname);
+  // Panel admin pakai shell mobile-native terpisah (AdminMobileShell) baik saat
+  // dibuka via aplikasi native (Capacitor) MAUPUN via browser di lebar layar HP
+  // (<768px) — jadi bisa langsung dipratinjau di browser tanpa build APK dulu.
+  const isMobileNativeAdmin = isManagement && (isNativePlatform() || isMobileViewport);
+
+  if (isMobileNativeAdmin) {
+    return (
+      <div className="app-shell h-screen bg-slate-100 flex flex-col print:bg-white print:block print:h-auto text-slate-800 overflow-hidden font-sans">
+        <AdminMobileShell onLogout={onLogout}>
+          <PrintStyles isLandscape={isLandscape} />
+          <AppRoutes
+            isManagement={isManagement}
+            mobileNativeAdmin={true}
+            appUser={appUser}
+            employees={employees}
+            attendance={attendance}
+            statusLocks={statusLocks}
+            settings={settings}
+            holidays={holidays}
+            fetchAttendanceByRange={fetchAttendanceByRange}
+            onLogout={onLogout}
+            biometricLoginEnabled={biometricLoginEnabled}
+            onSetBiometricLoginEnabled={setBiometricLoginEnabled}
+          />
+        </AdminMobileShell>
+      </div>
+    );
+  }
 
   return (
     <div className="app-shell h-screen bg-slate-100 flex flex-col md:flex-row print:bg-white print:block print:h-auto text-slate-800 overflow-hidden font-sans">
@@ -78,6 +110,7 @@ function MainContent() {
 
             <AppRoutes
               isManagement={isManagement}
+              mobileNativeAdmin={false}
               appUser={appUser}
               employees={employees}
               attendance={attendance}

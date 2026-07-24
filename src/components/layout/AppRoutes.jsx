@@ -11,6 +11,11 @@ import AdminSettings from '../admin/AdminSettings';
 import AdminCetakAbsensiManual from '../admin/AdminCetakAbsensiManual';
 import AdminRekapanTahunan from '../admin/AdminRekapanTahunan';
 
+// === KOMPONEN ADMIN MOBILE-NATIVE (Capacitor) ===
+import AdminMobileDashboard from '../admin-mobile/AdminMobileDashboard';
+import AdminMobileManajemenAbsensi from '../admin-mobile/AdminMobileManajemenAbsensi';
+import AdminMobileLaporanHarian from '../admin-mobile/AdminMobileLaporanHarian';
+
 // === KOMPONEN USER ===
 import UserHome from '../user/UserHome';
 import UserAbsensi from '../user/UserAbsensi';
@@ -20,16 +25,25 @@ import UserPengaturan from '../user/UserPengaturan';
 import UserStatusLokasi from '../user/UserStatusLokasi';
 
 export default function AppRoutes({
-  isManagement, appUser, employees, attendance, statusLocks, settings, holidays,
+  isManagement, mobileNativeAdmin, appUser, employees, attendance, statusLocks, settings, holidays,
   fetchAttendanceByRange, onLogout, biometricLoginEnabled, onSetBiometricLoginEnabled,
 }) {
   return (
     <Routes>
         {isManagement ? (
             <>
-                <Route path="/" element={<AdminDashboard employees={employees} attendance={attendance} statusLocks={statusLocks} settings={settings} />} />
-                <Route path="/manajemen-absensi" element={<AdminManajemenAbsensi employees={employees} statusLocks={statusLocks} />} />
-                <Route path="/laporan-harian" element={<AdminLaporanHarian employees={employees} attendance={attendance} statusLocks={statusLocks} settings={settings} holidays={holidays} />} />
+                <Route path="/" element={mobileNativeAdmin
+                    ? <AdminMobileDashboard employees={employees} attendance={attendance} statusLocks={statusLocks} settings={settings} />
+                    : <AdminDashboard employees={employees} attendance={attendance} statusLocks={statusLocks} settings={settings} />
+                } />
+                <Route path="/manajemen-absensi" element={mobileNativeAdmin
+                    ? <AdminMobileManajemenAbsensi employees={employees} statusLocks={statusLocks} />
+                    : <AdminManajemenAbsensi employees={employees} statusLocks={statusLocks} />
+                } />
+                <Route path="/laporan-harian" element={mobileNativeAdmin
+                    ? <AdminMobileLaporanHarian employees={employees} attendance={attendance} statusLocks={statusLocks} settings={settings} holidays={holidays} />
+                    : <AdminLaporanHarian employees={employees} attendance={attendance} statusLocks={statusLocks} settings={settings} holidays={holidays} />
+                } />
                 <Route path="/laporan-bulanan" element={<AdminRekapanBulanan employees={employees} attendance={attendance} settings={settings} user={appUser} holidays={holidays} fetchAttendanceByRange={fetchAttendanceByRange} />} />
                 <Route path="/rekapan-tahunan" element={<AdminRekapanTahunan employees={employees} attendance={attendance} settings={settings} fetchAttendanceByRange={fetchAttendanceByRange} />} />
                 <Route path="/cetak-manual" element={<AdminCetakAbsensiManual employees={employees} settings={settings} holidays={holidays} />} />
