@@ -5,6 +5,7 @@ import { addDoc, serverTimestamp } from 'firebase/firestore';
 import { getCollectionPath } from '../../lib/firebase';
 import { getTodayString, formatDateIndo, fetchServerTime, adjustTimezone, getDeviceType } from '../../utils/helpers';
 import { getCurrentPosition, findNearestGeoFence, isNativePlatform } from '../../lib/geolocation';
+import { startCamera, capturePhoto, stopCamera } from '../../lib/camera';
 
 // Menentukan sesi absensi (Pagi/Siang/Sore) berdasarkan jam berjalan & jendela waktu di settings
 const determineSession = (time, settings) => {
@@ -32,26 +33,20 @@ export default function UserAbsensi({ user, attendance, holidays, settings }) {
   const [geoState, setGeoState] = useState({ status: 'idle', location: null, message: '' });
   const [geoRetryTick, setGeoRetryTick] = useState(0);
 
-  // Fitur Kamera
+  // Fitur Kamera (native camera-preview via src/lib/camera.js, fallback getUserMedia di web)
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const [photo, setPhoto] = useState(null);
+  const native = isNativePlatform();
 
-  const startCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-    } catch (err) {
-      console.error("Gagal mengakses kamera: ", err);
-    }
+  const beginCamera = () => {
+    startCamera({ videoEl: videoRef.current }).catch((err) => {
+      console.error('Gagal mengakses kamera: ', err);
+    });
   };
 
-  const stopCamera = () => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      videoRef.current.srcObject.getTracks().forEach(track => track.stop());
-    }
+  const endCamera = () => {
+    stopCamera({ videoEl: videoRef.current }).catch(() => {});
   };
 
   // 1. Fetch Waktu Server saat komponen dimuat
@@ -127,7 +122,7 @@ export default function UserAbsensi({ user, attendance, holidays, settings }) {
 
     const runGeoCheck = async () => {
       if (done || !canAbsen || blockMessage) {
-        stopCamera();
+        endCamera();
         setGeoState({ status: 'idle', location: null, message: '' });
         return;
       }
@@ -137,7 +132,7 @@ export default function UserAbsensi({ user, attendance, holidays, settings }) {
 
       if (!geoActive) {
         setGeoState({ status: 'ok', location: null, message: '' });
-        startCamera();
+        beginCamera();
         return;
       }
 
@@ -147,7 +142,7 @@ export default function UserAbsensi({ user, attendance, holidays, settings }) {
         if (cancelled) return;
 
         if (pos.mockSuspected) {
-          stopCamera();
+          endCamera();
           setGeoState({
             status: 'mock',
             location: pos,
@@ -160,7 +155,7 @@ export default function UserAbsensi({ user, attendance, holidays, settings }) {
         const withinFence = nearest && nearest.distance <= nearest.radius;
 
         if (!withinFence) {
-          stopCamera();
+          endCamera();
           setGeoState({
             status: 'blocked',
             location: pos,
@@ -172,10 +167,10 @@ export default function UserAbsensi({ user, attendance, holidays, settings }) {
         }
 
         setGeoState({ status: 'ok', location: pos, message: '' });
-        startCamera();
+        beginCamera();
       } catch (err) {
         if (cancelled) return;
-        stopCamera();
+        endCamera();
         console.error('[UserAbsensi] Gagal ambil lokasi GPS:', err);
         const isPermission = err?.code === 'PERMISSION_DENIED' || err?.code === 1;
         const isServicesOff = err?.code === 'LOCATION_SERVICES_DISABLED';
@@ -195,23 +190,26 @@ export default function UserAbsensi({ user, attendance, holidays, settings }) {
 
   // Bersihkan kamera saat unmount
   useEffect(() => {
-      return () => stopCamera();
+      return () => endCamera();
   }, []);
 
-  const takePhoto = (e) => {
+  const takePhoto = async (e) => {
     e.preventDefault();
-    if (videoRef.current && canvasRef.current) {
-      const context = canvasRef.current.getContext('2d');
-      context.drawImage(videoRef.current, 0, 0, 300, 400);
-      const dataUrl = canvasRef.current.toDataURL('image/jpeg');
-      setPhoto(dataUrl);
-      stopCamera();
+    try {
+      const dataUrl = await capturePhoto({ videoEl: videoRef.current, canvasEl: canvasRef.current });
+      if (dataUrl) {
+        setPhoto(dataUrl);
+        endCamera();
+      }
+    } catch (err) {
+      console.error('Gagal mengambil foto: ', err);
+      alert('Gagal mengambil foto. Coba lagi.');
     }
   };
 
   const retakePhoto = () => {
     setPhoto(null);
-    startCamera();
+    beginCamera();
   };
 
   const submit = async (e) => {
@@ -276,13 +274,19 @@ export default function UserAbsensi({ user, attendance, holidays, settings }) {
   const showPanelBack = !showCamera;
 
   return (
-    <div className="flex flex-col min-h-full bg-slate-900 overflow-hidden relative pb-10 safe-top">
+    <div className="camera-screen flex flex-col min-h-full bg-slate-900 overflow-hidden relative pb-10 safe-top">
 
       {/* BAGIAN KAMERA (Hanya Tampil Jika Bisa Absen & Lolos Validasi Lokasi) */}
       {showCamera && (
-        <div className="relative flex-1 min-h-[50vh] bg-slate-900 flex flex-col items-center justify-center overflow-hidden">
+        <div className="camera-stage relative flex-1 min-h-[50vh] bg-slate-900 flex flex-col items-center justify-center overflow-hidden">
             {!photo ? (
-                <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover absolute inset-0 transform scale-x-[-1]"></video>
+                // Native: preview kamera dirender di lapisan native di belakang webview,
+                // jadi area ini dibiarkan transparan. Web: pakai <video> getUserMedia.
+                native ? (
+                  <div className="absolute inset-0" />
+                ) : (
+                  <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover absolute inset-0 transform scale-x-[-1]"></video>
+                )
             ) : (
                 <img src={photo} alt="Biometrik" className="w-full h-full object-cover absolute inset-0 transform scale-x-[-1]" />
             )}
