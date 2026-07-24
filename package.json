@@ -1,6 +1,6 @@
 {
   "name": "aplikasi-absensi-final",
-  "homepage": "https://winkamaru-gela.github.io/aplikasi-absensi",
+  "homepage": "https://darwin-kamarudin.github.io/digipres-bpkad",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -12,7 +12,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "predeploy": "npm run build:web",
-    "deploy": "gh-pages -d dist",
+    "deploy": "gh-pages -d dist -r https://github.com/darwin-kamarudin/digipres-bpkad.git",
     "cap:sync": "npx cap sync android",
     "build:debug": "npm run build && npm run cap:sync && cd android && gradlew assembleDebug",
     "build:releaseandroid": "npm run build && npm run cap:sync && cd android && gradlew bundleRelease assembleRelease"
