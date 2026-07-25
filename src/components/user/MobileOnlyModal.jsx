@@ -30,13 +30,13 @@ export default function MobileOnlyModal({ open, onClose, downloadUrl }) {
           <div className="w-20 h-20 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center mb-5">
             <Smartphone size={40} />
           </div>
-          <h1 className="text-xl font-black leading-snug max-w-xs">Absensi Hanya Bisa Dilakukan Menggunakan Aplikasi</h1>
+          <h1 className="text-xl font-black leading-snug max-w-xs">Sekarang! Absensi Hanya Bisa Dilakukan Lewat Aplikasi Mobile</h1>
         </div>
 
         {/* LEMBAR BAWAH */}
         <div className="flex-1 bg-slate-50 rounded-t-[2rem] shadow-[0_-10px_30px_rgba(0,0,0,0.2)] px-6 pt-8 pb-8 safe-bottom flex flex-col overflow-y-auto">
           <p className="text-sm text-slate-600 text-center leading-relaxed mb-6">
-            Instansi Anda mewajibkan absensi lewat aplikasi mobile resmi. Unduh dan buka aplikasinya untuk melanjutkan absensi.
+            Silakan Unduh dan pasang aplikasi DigiPres (Digital Presensi) ke ponsel Anda untuk melanjutkan absensi mandiri.
           </p>
 
           {downloadUrl ? (
