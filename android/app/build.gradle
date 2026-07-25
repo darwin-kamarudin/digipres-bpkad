@@ -1,5 +1,16 @@
 apply plugin: 'com.android.application'
 
+// Baca kredensial signing rilis dari android/keystore.properties (file lokal,
+// TIDAK di-commit ke git — lihat keystore.properties.example untuk template).
+// Kalau file belum dibuat (mis. build debug biasa), otomatis fallback ke
+// signing debug bawaan supaya build tetap jalan tanpa error.
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def keystoreProperties = new Properties()
+def hasReleaseSigning = keystorePropertiesFile.exists()
+if (hasReleaseSigning) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 android {
     namespace = "com.absensidigital.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -16,10 +27,21 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (hasReleaseSigning) {
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig hasReleaseSigning ? signingConfigs.release : signingConfigs.debug
         }
     }
 }

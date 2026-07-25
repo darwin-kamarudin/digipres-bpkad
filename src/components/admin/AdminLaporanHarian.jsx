@@ -20,7 +20,7 @@ export default function AdminLaporanHarian({ employees, attendance, statusLocks 
   const isNonEffective = isWeekend || !!holidayData;
 
   // --- GUNAKAN LOGIC TERPUSAT ---
-  const { grouped, counts } = getDailyStats(date, session, employees, attendance, statusLocks);
+  const { grouped, counts } = getDailyStats(date, session, employees, attendance, statusLocks, holidays);
 
   // Sorting Khusus untuk Laporan (Hadir berdasarkan No, Sisanya Default/Nama)
   const hadirList = grouped.Hadir.sort((a, b) => (parseInt(a.no) || 99999) - (parseInt(b.no) || 99999));

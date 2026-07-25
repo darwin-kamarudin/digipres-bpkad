@@ -3,7 +3,7 @@ import { Printer, ChevronDown } from 'lucide-react';
 import { getTodayString, formatDateIndo } from '../../utils/helpers';
 import { getDailyStats } from '../../utils/statistics';
 import LaporanHarianDocument from '../admin/LaporanHarianDocument';
-import PinchZoomView from './PinchZoomView';
+import PinchZoomView from '../shared/PinchZoomView';
 import { printDocumentNode } from '../../lib/printDocument';
 
 // Versi mobile-native dari AdminLaporanHarian.jsx. Panel kontrol (tanggal,
@@ -26,7 +26,7 @@ export default function AdminMobileLaporanHarian({ employees, attendance, status
   const holidayData = holidays.find(h => h.date === date);
   const isNonEffective = isWeekend || !!holidayData;
 
-  const { grouped, counts } = getDailyStats(date, session, employees, attendance, statusLocks);
+  const { grouped, counts } = getDailyStats(date, session, employees, attendance, statusLocks, holidays);
 
   const hadirList = grouped.Hadir.sort((a, b) => (parseInt(a.no) || 99999) - (parseInt(b.no) || 99999));
   const sakitList = grouped.Sakit.sort((a, b) => a.nama.localeCompare(b.nama));

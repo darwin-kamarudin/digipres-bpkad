@@ -23,6 +23,7 @@ import UserRiwayat from '../user/UserRiwayat';
 import UserRekapan from '../user/UserRekapan';
 import UserPengaturan from '../user/UserPengaturan';
 import UserStatusLokasi from '../user/UserStatusLokasi';
+import UserStatistikAbsensi from '../user/UserStatistikAbsensi';
 
 export default function AppRoutes({
   isManagement, mobileNativeAdmin, appUser, employees, attendance, statusLocks, settings, holidays,
@@ -33,8 +34,8 @@ export default function AppRoutes({
         {isManagement ? (
             <>
                 <Route path="/" element={mobileNativeAdmin
-                    ? <AdminMobileDashboard employees={employees} attendance={attendance} statusLocks={statusLocks} settings={settings} />
-                    : <AdminDashboard employees={employees} attendance={attendance} statusLocks={statusLocks} settings={settings} />
+                    ? <AdminMobileDashboard employees={employees} attendance={attendance} statusLocks={statusLocks} settings={settings} holidays={holidays} />
+                    : <AdminDashboard employees={employees} attendance={attendance} statusLocks={statusLocks} settings={settings} holidays={holidays} />
                 } />
                 <Route path="/manajemen-absensi" element={mobileNativeAdmin
                     ? <AdminMobileManajemenAbsensi employees={employees} statusLocks={statusLocks} />
@@ -56,10 +57,11 @@ export default function AppRoutes({
                 <Route path="/" element={<UserHome user={appUser} attendance={attendance} settings={settings} />} />
                 <Route path="/input-absensi" element={<Navigate to="/absensi-mandiri" />} />
                 <Route path="/absensi-mandiri" element={<UserAbsensi user={appUser} attendance={attendance} holidays={holidays} settings={settings} />} />
-                <Route path="/riwayat-absensi" element={<UserRiwayat user={appUser} attendance={attendance} />} />
+                <Route path="/riwayat-absensi" element={<UserRiwayat user={appUser} attendance={attendance} settings={settings} holidays={holidays} />} />
                 <Route path="/status-lokasi" element={<UserStatusLokasi settings={settings} />} />
-                <Route path="/laporan-bulanan" element={<UserRekapan user={appUser} attendance={attendance} statusLocks={statusLocks} settings={settings} employees={employees} />} />
-                <Route path="/pengaturan" element={<UserPengaturan user={appUser} onLogout={onLogout} biometricLoginEnabled={biometricLoginEnabled} onSetBiometricLoginEnabled={onSetBiometricLoginEnabled} />} />
+                <Route path="/statistik-absensi" element={<UserStatistikAbsensi employees={employees} attendance={attendance} statusLocks={statusLocks} settings={settings} holidays={holidays} />} />
+                <Route path="/laporan-bulanan" element={<UserRekapan user={appUser} attendance={attendance} statusLocks={statusLocks} settings={settings} employees={employees} holidays={holidays} />} />
+                <Route path="/pengaturan" element={<UserPengaturan user={appUser} settings={settings} onLogout={onLogout} biometricLoginEnabled={biometricLoginEnabled} onSetBiometricLoginEnabled={onSetBiometricLoginEnabled} />} />
             </>
         )}
 

@@ -6,6 +6,7 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 // (dan digeser dengan drag satu jari saat sedang diperbesar) untuk membaca
 // detail dokumen. Saat dicetak, transform dilepas (lihat kelas print:) agar
 // hasil cetak tetap memakai ukuran asli, bukan versi skala-kecil ini.
+// Dipakai bersama oleh panel admin mobile & panel pegawai (user).
 export default function PinchZoomView({ children, contentWidth = 640 }) {
   const containerRef = useRef(null);
   const [fitScale, setFitScale] = useState(1);

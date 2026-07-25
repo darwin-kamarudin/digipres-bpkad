@@ -104,24 +104,46 @@ function MainContent() {
         />
 
         {/* CONTENT AREA (ROUTER VIEW) */}
-        {/* Staf (bukan manajemen) SELALU full-screen mobile, tanpa padding container di ukuran layar manapun */}
-        <div className={`app-content flex-1 overflow-y-auto ${!isManagement ? 'p-0 bg-gray-50' : 'p-6 md:p-8 bg-slate-100'} print:p-0 print:overflow-visible`}>
+        {/* Staf (bukan manajemen) SELALU dikunci ke lebar tampilan mobile (max-w-md,
+            dipusatkan dengan latar netral di sisi kiri/kanan) — baik diakses lewat
+            aplikasi native maupun browser desktop sekalipun. Panel admin (di bawah)
+            tidak terpengaruh, tetap memakai layout responsif penuh seperti biasa. */}
+        <div className={`app-content flex-1 overflow-y-auto ${!isManagement ? 'p-0 bg-slate-300' : 'p-6 md:p-8 bg-slate-100'} print:p-0 print:overflow-visible`}>
             <PrintStyles isLandscape={isLandscape} />
 
-            <AppRoutes
-              isManagement={isManagement}
-              mobileNativeAdmin={false}
-              appUser={appUser}
-              employees={employees}
-              attendance={attendance}
-              statusLocks={statusLocks}
-              settings={settings}
-              holidays={holidays}
-              fetchAttendanceByRange={fetchAttendanceByRange}
-              onLogout={onLogout}
-              biometricLoginEnabled={biometricLoginEnabled}
-              onSetBiometricLoginEnabled={setBiometricLoginEnabled}
-            />
+            {!isManagement ? (
+              <div className="max-w-md w-full mx-auto min-h-full bg-slate-50 shadow-2xl print:shadow-none print:max-w-none">
+                <AppRoutes
+                  isManagement={isManagement}
+                  mobileNativeAdmin={false}
+                  appUser={appUser}
+                  employees={employees}
+                  attendance={attendance}
+                  statusLocks={statusLocks}
+                  settings={settings}
+                  holidays={holidays}
+                  fetchAttendanceByRange={fetchAttendanceByRange}
+                  onLogout={onLogout}
+                  biometricLoginEnabled={biometricLoginEnabled}
+                  onSetBiometricLoginEnabled={setBiometricLoginEnabled}
+                />
+              </div>
+            ) : (
+              <AppRoutes
+                isManagement={isManagement}
+                mobileNativeAdmin={false}
+                appUser={appUser}
+                employees={employees}
+                attendance={attendance}
+                statusLocks={statusLocks}
+                settings={settings}
+                holidays={holidays}
+                fetchAttendanceByRange={fetchAttendanceByRange}
+                onLogout={onLogout}
+                biometricLoginEnabled={biometricLoginEnabled}
+                onSetBiometricLoginEnabled={setBiometricLoginEnabled}
+              />
+            )}
         </div>
       </main>
     </div>

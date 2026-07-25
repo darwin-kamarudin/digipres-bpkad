@@ -1,13 +1,13 @@
-import React, { useState, useRef } from 'react';
-import { Calendar, LogIn, LogOut, Coffee, Smartphone } from 'lucide-react';
-import { getTodayString } from '../../utils/helpers';
+import React, { useState, useRef, useEffect } from 'react';
+import { Calendar, Clock3 } from 'lucide-react';
+import { getTodayString, formatDateIndo, isNonEffectiveDate } from '../../utils/helpers';
+import { loadLastLocationPing } from '../../lib/localDb';
+import { computeJamKerja } from '../../utils/jamKerja';
 import MobileHeader from './MobileHeader';
 
-const CHECK_META = {
-  Pagi: { label: 'Masuk', icon: LogIn, color: 'text-green-600 bg-green-50' },
-  Siang: { label: 'Istirahat', icon: Coffee, color: 'text-amber-600 bg-amber-50' },
-  Sore: { label: 'Keluar', icon: LogOut, color: 'text-red-600 bg-red-50' },
-};
+// Kolom "Check": Pagi & Siang (checkin siang) dihitung "Masuk", Sore (checkout
+// pulang) dihitung "Keluar" — sesuai definisi yang diminta untuk tabel riwayat ini.
+const CHECK_LABEL = { Pagi: 'Masuk', Siang: 'Masuk', Sore: 'Keluar' };
 
 const toDDMMYYYY = (dateStr) => {
   if (!dateStr) return '-';
@@ -15,14 +15,29 @@ const toDDMMYYYY = (dateStr) => {
   return `${d}/${m}/${y}`;
 };
 
-export default function UserRiwayat({ user, attendance }) {
+export default function UserRiwayat({ user, attendance, settings, holidays = [] }) {
   const dateInputRef = useRef(null);
   const [activeTab, setActiveTab] = useState('online');
   const [filterDate, setFilterDate] = useState(getTodayString());
+  const [lastPing, setLastPing] = useState(null);
 
+  useEffect(() => {
+    loadLastLocationPing(user.id).then((p) => { if (p) setLastPing(p); });
+  }, [user.id]);
+
+  // Jam Kerja dihitung dari SELURUH log tanggal terpilih (bukan hanya tab
+  // online/offline yang sedang aktif) supaya konsisten dengan Beranda.
+  const dayLogs = attendance.filter(l => l.userId === user.id && l.date === filterDate);
+  const checkInLog = dayLogs.find(l => l.session === 'Pagi');
+  const checkOutLog = dayLogs.find(l => l.session === 'Sore');
+  const { value: jamKerja, note: jamKerjaNote } = computeJamKerja({ checkInLog, checkOutLog, lastPing, settings });
+  const { isNonEffective, holiday } = isNonEffectiveDate(filterDate, holidays);
+
+  // Tabel riwayat: seluruh histori SAMPAI DENGAN tanggal terpilih (bukan cuma
+  // tanggal itu saja) supaya beberapa hari terakhir tampil sekaligus, terbaru di atas.
   const myLogs = attendance
     .filter(l => l.userId === user.id)
-    .filter(l => l.date === filterDate)
+    .filter(l => l.date <= filterDate)
     .filter(l => activeTab === 'online' ? l.connectionStatus !== 'offline' : l.connectionStatus === 'offline')
     .sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
 
@@ -69,36 +84,57 @@ export default function UserRiwayat({ user, attendance }) {
           />
         </div>
 
-        {/* DAFTAR RIWAYAT (LIST NATIVE, BUKAN TABEL) */}
+        {/* RINGKASAN JAM KERJA / LIBUR TANGGAL TERPILIH */}
+        <div className="bg-white border border-slate-100 rounded-2xl p-4 mb-4 shadow-sm flex items-center gap-3">
+          <div className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 bg-red-50 text-red-700">
+            <Clock3 size={20} />
+          </div>
+          <div className="min-w-0">
+            {isNonEffective ? (
+              <>
+                <p className="font-bold text-slate-800">Hari Libur</p>
+                <p className="text-xs text-slate-500">{formatDateIndo(filterDate)} — {holiday ? holiday.desc : 'Libur Akhir Pekan'}</p>
+              </>
+            ) : (
+              <>
+                <p className="font-bold text-slate-800">Jam Kerja: {jamKerja} jam</p>
+                <p className="text-xs text-slate-500">{formatDateIndo(filterDate)}{jamKerjaNote ? ` — ${jamKerjaNote}` : ''}</p>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* TABEL RIWAYAT ABSENSI */}
         {myLogs.length === 0 ? (
           <div className="bg-white border border-slate-100 rounded-2xl p-8 text-center text-slate-400 italic shadow-sm">
-            Belum ada riwayat pada tanggal ini.
+            {isNonEffective ? (holiday ? holiday.desc : 'Libur akhir pekan — tidak ada absensi.') : 'Belum ada riwayat pada tanggal ini.'}
           </div>
         ) : (
-          <div className="space-y-3">
-            {myLogs.map(l => {
-              const meta = CHECK_META[l.session] || { label: l.session, icon: LogIn, color: 'text-slate-600 bg-slate-100' };
-              const Icon = meta.icon;
-              return (
-                <div key={l.id} className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm flex items-center gap-3">
-                  <div className={`w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 ${meta.color}`}>
-                    <Icon size={20} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-slate-800">{meta.label}</p>
-                    <p className="text-xs text-slate-500">
+          <div className="overflow-x-auto rounded-2xl border border-red-800 shadow-sm">
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="bg-red-700 text-white">
+                  <th className="p-2.5 font-bold border border-red-800">Device</th>
+                  <th className="p-2.5 font-bold border border-red-800">Tgl</th>
+                  <th className="p-2.5 font-bold border border-red-800">Jam</th>
+                  <th className="p-2.5 font-bold border border-red-800">WF</th>
+                  <th className="p-2.5 font-bold border border-red-800">Check</th>
+                </tr>
+              </thead>
+              <tbody>
+                {myLogs.map((l) => (
+                  <tr key={l.id} className="bg-white even:bg-slate-50">
+                    <td className="p-2.5 text-center border border-slate-200 text-slate-700">{l.device || 'web'}</td>
+                    <td className="p-2.5 text-center border border-slate-200 text-slate-700">{toDDMMYYYY(l.date)}</td>
+                    <td className="p-2.5 text-center border border-slate-200 text-slate-700">
                       {l.timestamp ? new Date(l.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '-'}
-                    </p>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <span className="inline-block text-[11px] font-bold px-2 py-1 rounded-full bg-blue-50 text-blue-700">{l.workMode || 'WFO'}</span>
-                    <p className="text-[10px] text-slate-400 mt-1 flex items-center justify-end gap-1 uppercase">
-                      <Smartphone size={11} /> {l.device || 'web'}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
+                    </td>
+                    <td className="p-2.5 text-center border border-slate-200 text-slate-700">{l.workMode || 'WFO'}</td>
+                    <td className="p-2.5 text-center border border-slate-200 font-semibold text-slate-700">{CHECK_LABEL[l.session] || l.session}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>

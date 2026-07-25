@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { History, Printer, Settings, Wifi, WifiOff, Calendar, Clock3, ScanFace, Lock, Camera, MapPinCheck } from 'lucide-react';
-import { getTodayString, formatDateIndo, calcJamKerja, SESSION_LABELS } from '../../utils/helpers';
-import { isNativePlatform } from '../../lib/geolocation';
-import { loadProfilePhoto, saveProfilePhoto } from '../../lib/localDb';
+import { History, Printer, UserCircle, Wifi, WifiOff, Calendar, Clock3, ScanFace, Lock, Camera, MapPinCheck, BarChart3 } from 'lucide-react';
+import { getTodayString, formatDateIndo, SESSION_LABELS } from '../../utils/helpers';
+import { isNativePlatform, getCurrentPosition, isWithinAnyGeoFence } from '../../lib/geolocation';
+import { loadProfilePhoto, saveProfilePhoto, loadLastLocationPing, saveLastLocationPing } from '../../lib/localDb';
+import { computeJamKerja } from '../../utils/jamKerja';
+import MobileOnlyModal from './MobileOnlyModal';
 
 const withSeconds = (hhmm) => (hhmm ? `${hhmm}:00` : '00:00:00');
 
@@ -12,7 +14,47 @@ export default function UserHome({ user, attendance, settings }) {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [photoUrl, setPhotoUrl] = useState(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [now, setNow] = useState(() => new Date());
+  const [lastPing, setLastPing] = useState(null);
+  const [showMobileOnlyModal, setShowMobileOnlyModal] = useState(false);
   const fileInputRef = useRef(null);
+
+  // Jam Kerja yang belum di-checkout ("sedang berjalan") ikut berdetak tiap menit.
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 60000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Sampel GPS oportunis: setiap Beranda dibuka/kembali aktif, kalau posisi saat ini
+  // ternyata di dalam radius kantor, simpan sebagai "terakhir terdeteksi di kantor"
+  // hari ini. Dipakai computeJamKerja() sebagai perkiraan jam pulang otomatis kalau
+  // pegawai lupa/tidak sempat checkout mandiri. Gagal diam-diam (tidak mengganggu UI).
+  useEffect(() => {
+    let cancelled = false;
+    const sample = async () => {
+      try {
+        if (!settings?.geoFenceEnabled || !(settings?.geoLocations?.length)) return;
+        const pos = await getCurrentPosition();
+        if (cancelled) return;
+        if (isWithinAnyGeoFence(pos.lat, pos.lng, settings.geoLocations)) {
+          const ping = { date: getTodayString(), timestamp: new Date().toISOString() };
+          await saveLastLocationPing(user.id, ping);
+          if (!cancelled) setLastPing(ping);
+        }
+      } catch {
+        // GPS mati/izin ditolak/dsb -> abaikan, ini cuma sampling latar belakang.
+      }
+    };
+    sample();
+    const onVisible = () => { if (document.visibilityState === 'visible') sample(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { cancelled = true; document.removeEventListener('visibilitychange', onVisible); };
+  }, [user.id, settings?.geoFenceEnabled, settings?.geoLocations]);
+
+  // Muat ping tersimpan (kalau ada) saat komponen pertama kali dipasang.
+  useEffect(() => {
+    loadLastLocationPing(user.id).then((p) => { if (p) setLastPing(p); });
+  }, [user.id]);
 
   useEffect(() => {
     const goOnline = () => setIsOnline(true);
@@ -68,7 +110,7 @@ export default function UserHome({ user, attendance, settings }) {
     ? new Date(log.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
     : '00:00:00';
 
-  const jamKerja = calcJamKerja(checkInLog?.timestamp, checkOutLog?.timestamp);
+  const { value: jamKerja, note: jamKerjaNote } = computeJamKerja({ checkInLog, checkOutLog, lastPing, now, settings });
   const mobileOnlyBlocked = settings?.mobileOnlyAbsensi && !isNativePlatform();
 
   const jadwal = [
@@ -81,17 +123,10 @@ export default function UserHome({ user, attendance, settings }) {
     <div className="min-h-full bg-slate-50 flex flex-col font-sans safe-top">
       <div className="flex-1 max-w-md w-full mx-auto p-5 pb-28">
 
-        {/* LOGO */}
-        <div className="flex justify-end mb-4">
-          <span className="text-lg font-black tracking-tight">
-            <span className="text-red-600">Digi</span><span className="text-amber-500">Pres</span>
-          </span>
-        </div>
-
         {/* PROFIL */}
         <div className="flex items-start gap-4 mb-6">
           <div className="relative flex-shrink-0">
-            <div className="w-20 h-20 rounded-full border-4 border-red-600 bg-white flex items-center justify-center text-red-600 font-black text-3xl overflow-hidden">
+            <div className="w-28 h-28 rounded-full border-4 border-red-600 bg-white flex items-center justify-center text-red-600 font-black text-4xl overflow-hidden">
               {photoUrl ? (
                 <img src={photoUrl} alt="Foto Profil" className="w-full h-full object-cover" />
               ) : (
@@ -103,9 +138,9 @@ export default function UserHome({ user, attendance, settings }) {
               onClick={() => fileInputRef.current?.click()}
               disabled={uploadingPhoto}
               aria-label="Ubah Foto Profil"
-              className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-red-700 border-2 border-white text-white flex items-center justify-center active:scale-95 transition-transform disabled:opacity-50"
+              className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-red-700 border-2 border-white text-white flex items-center justify-center active:scale-95 transition-transform disabled:opacity-50"
             >
-              <Camera size={14} />
+              <Camera size={16} />
             </button>
             <input
               ref={fileInputRef}
@@ -117,7 +152,7 @@ export default function UserHome({ user, attendance, settings }) {
           </div>
           <div className="flex-1 min-w-0 pt-1">
             <h1 className="text-lg font-black text-slate-800 uppercase leading-tight break-words">{user.nama}</h1>
-            <p className="text-sm text-slate-600">{user.nip || '-'}</p>
+            <p className="text-sm text-slate-600">NIP. {user.nip || '-'}</p>
             <p className="text-sm text-slate-600 uppercase leading-snug">{settings?.opdName}</p>
             <div className="flex items-center gap-2 mt-1">
               <span className={`text-sm font-semibold ${isOnline ? 'text-green-600' : 'text-red-500'}`}>{isOnline ? 'Online' : 'Offline'}</span>
@@ -132,23 +167,27 @@ export default function UserHome({ user, attendance, settings }) {
           <span>{formatDateIndo(today)}</span>
         </div>
 
-        {/* 4 TOMBOL AKSI */}
-        <div className="grid grid-cols-4 gap-3 mb-6">
-          <button onClick={() => navigate('/riwayat-absensi')} className="bg-red-700 active:bg-red-800 active:scale-95 transition-all text-white rounded-2xl p-3 shadow-lg flex flex-col items-center gap-2">
-            <History size={22} />
-            <span className="font-bold text-[11px]">Riwayat</span>
+        {/* 5 TOMBOL AKSI */}
+        <div className="grid grid-cols-5 gap-2 mb-6">
+          <button onClick={() => navigate('/riwayat-absensi')} className="bg-red-700 active:bg-red-800 active:scale-95 transition-all text-white rounded-2xl p-2.5 shadow-lg flex flex-col items-center gap-1.5">
+            <History size={20} />
+            <span className="font-bold text-[10px]">Riwayat</span>
           </button>
-          <button onClick={() => navigate('/status-lokasi')} className="bg-red-700 active:bg-red-800 active:scale-95 transition-all text-white rounded-2xl p-3 shadow-lg flex flex-col items-center gap-2">
-            <MapPinCheck size={22} />
-            <span className="font-bold text-[11px]">Status</span>
+          <button onClick={() => navigate('/status-lokasi')} className="bg-red-700 active:bg-red-800 active:scale-95 transition-all text-white rounded-2xl p-2.5 shadow-lg flex flex-col items-center gap-1.5">
+            <MapPinCheck size={20} />
+            <span className="font-bold text-[10px]">Status</span>
           </button>
-          <button onClick={() => navigate('/laporan-bulanan')} className="bg-red-700 active:bg-red-800 active:scale-95 transition-all text-white rounded-2xl p-3 shadow-lg flex flex-col items-center gap-2">
-            <Printer size={22} />
-            <span className="font-bold text-[11px]">Cetak</span>
+          <button onClick={() => navigate('/statistik-absensi')} className="bg-red-700 active:bg-red-800 active:scale-95 transition-all text-white rounded-2xl p-2.5 shadow-lg flex flex-col items-center gap-1.5">
+            <BarChart3 size={20} />
+            <span className="font-bold text-[10px]">Statistik</span>
           </button>
-          <button onClick={() => navigate('/pengaturan')} className="bg-red-700 active:bg-red-800 active:scale-95 transition-all text-white rounded-2xl p-3 shadow-lg flex flex-col items-center gap-2">
-            <Settings size={22} />
-            <span className="font-bold text-[11px]">Pengaturan</span>
+          <button onClick={() => navigate('/laporan-bulanan')} className="bg-red-700 active:bg-red-800 active:scale-95 transition-all text-white rounded-2xl p-2.5 shadow-lg flex flex-col items-center gap-1.5">
+            <Printer size={20} />
+            <span className="font-bold text-[10px]">Cetak</span>
+          </button>
+          <button onClick={() => navigate('/pengaturan')} className="bg-red-700 active:bg-red-800 active:scale-95 transition-all text-white rounded-2xl p-2.5 shadow-lg flex flex-col items-center gap-1.5">
+            <UserCircle size={20} />
+            <span className="font-bold text-[10px]">Profil</span>
           </button>
         </div>
 
@@ -168,7 +207,10 @@ export default function UserHome({ user, attendance, settings }) {
               <p className="font-bold text-slate-800">{formatJam(checkOutLog)}</p>
             </div>
           </div>
-          <p className="text-center font-bold text-slate-800 mt-4">Jam Kerja: {jamKerja}</p>
+          <p className="text-center font-bold text-slate-800 mt-4">Jam Kerja: {jamKerja} jam</p>
+          {jamKerjaNote && (
+            <p className="text-center text-[11px] text-amber-600 font-semibold mt-1">({jamKerjaNote})</p>
+          )}
         </div>
 
         {/* CARD JADWAL JAM KANTOR */}
@@ -191,11 +233,13 @@ export default function UserHome({ user, attendance, settings }) {
         </div>
       </div>
 
-      {/* TOMBOL PRESENSI (FIXED BOTTOM) */}
-      <div className="fixed bottom-0 left-0 right-0 safe-bottom">
+      {/* TOMBOL PRESENSI (STICKY BOTTOM) — sticky (bukan fixed) supaya tetap
+          terkunci mengikuti lebar frame mobile (max-w-md) yang di-set di App.jsx,
+          bukan lebar penuh browser saat diakses dari desktop. */}
+      <div className="sticky bottom-0 z-10 safe-bottom">
         <div className="max-w-md mx-auto flex flex-col items-center pb-4 pt-2 bg-gradient-to-t from-slate-50 via-slate-50/90 to-transparent">
           <button
-            onClick={() => navigate('/absensi-mandiri')}
+            onClick={() => mobileOnlyBlocked ? setShowMobileOnlyModal(true) : navigate('/absensi-mandiri')}
             className="w-24 h-24 rounded-full border-4 border-red-700 bg-white flex items-center justify-center text-red-700 shadow-xl active:scale-95 transition-transform mb-[-1px] relative z-10"
           >
             {mobileOnlyBlocked ? <Lock size={36} /> : <ScanFace size={40} />}
@@ -205,6 +249,12 @@ export default function UserHome({ user, attendance, settings }) {
           </div>
         </div>
       </div>
+
+      <MobileOnlyModal
+        open={showMobileOnlyModal}
+        onClose={() => setShowMobileOnlyModal(false)}
+        downloadUrl={settings?.androidDownloadUrl}
+      />
     </div>
   );
 }

@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Printer } from 'lucide-react';
 import { getTodayString, getWeekNumber, formatDateIndo, DEFAULT_LOGO_URL } from '../../utils/helpers';
 import { mergeAttendanceWithLocks } from '../../utils/statistics';
 import MobileHeader from './MobileHeader';
+import PinchZoomView from '../shared/PinchZoomView';
+import { printDocumentNode } from '../../lib/printDocument';
 
-export default function UserRekapan({ user, attendance, statusLocks = [], settings, employees = [] }) {
+export default function UserRekapan({ user, attendance, statusLocks = [], settings, employees = [], holidays = [] }) {
    const navigate = useNavigate();
+   const docRef = useRef(null);
    const [viewMode, setViewMode] = useState('bulanan');
    const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
    const [week, setWeek] = useState(getTodayString());
@@ -25,7 +28,7 @@ export default function UserRekapan({ user, attendance, statusLocks = [], settin
    // Gabungkan absensi mandiri dengan kunci status admin (Izin/Sakit/Cuti/DL).
    // Absensi mandiri menang -> hari yang diabsen tampil Hadir (buka kunci otomatis).
    const rangeYear = (viewMode === 'bulanan' ? month : week).slice(0, 4);
-   const mergedLogs = mergeAttendanceWithLocks(attendance, statusLocks, `${rangeYear}-01-01`, `${rangeYear}-12-31`);
+   const mergedLogs = mergeAttendanceWithLocks(attendance, statusLocks, `${rangeYear}-01-01`, `${rangeYear}-12-31`, holidays);
 
    const filteredLogs = mergedLogs.filter(l => {
       const isUser = l.userId === user.id && l.statusApproval === 'approved';
@@ -75,7 +78,7 @@ export default function UserRekapan({ user, attendance, statusLocks = [], settin
                       )}
                    </div>
                 </div>
-                <button onClick={()=>window.print()} className="bg-slate-800 text-white px-4 py-2 rounded flex items-center hover:bg-black transition-colors shadow-sm active:scale-95">
+                <button onClick={() => printDocumentNode(docRef.current, `Rekapan Absensi - ${user.nama} - ${rangeText}`)} className="bg-slate-800 text-white px-4 py-2 rounded flex items-center hover:bg-black transition-colors shadow-sm active:scale-95">
                     <Printer size={16} className="mr-2"/> Cetak
                 </button>
              </div>
@@ -105,8 +108,10 @@ export default function UserRekapan({ user, attendance, statusLocks = [], settin
          </div>
 
          {/* REPORT AREA */}
-         <div className="bg-white p-8 rounded shadow print:shadow-none print:w-full">
-            
+         <p className="text-center text-[11px] text-slate-400 print:hidden">Cubit (pinch) untuk perbesar, geser untuk lihat detail. Ketuk dua kali untuk reset.</p>
+         <PinchZoomView contentWidth={640}>
+         <div ref={docRef} className="bg-white p-8 rounded shadow print:shadow-none print:w-full">
+
             {/* KOP SURAT */}
             <div className="flex border-b-4 border-double border-black pb-4 mb-6 items-center justify-center relative">
                <img src={settings.logoUrl || DEFAULT_LOGO_URL} className="h-20 absolute left-0" alt="logo"/>
@@ -228,6 +233,7 @@ export default function UserRekapan({ user, attendance, statusLocks = [], settin
                 </div>
              </div>
          </div>
+         </PinchZoomView>
          </div>
       </div>
    );

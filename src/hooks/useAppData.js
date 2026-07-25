@@ -74,7 +74,13 @@ export const useAppData = () => {
         if (session) {
           const match = emp.find(u => u.id === session.id && u.username === session.username && u.password === session.password);
           if (match) {
-            setAppUser(match);
+            // session.loggedIn === false berarti pengguna sudah logout secara eksplisit
+            // sebelumnya (tapi login sidik jari masih aktif) -> JANGAN auto-login diam-diam,
+            // biarkan LoginPage tampil dan tunggu verifikasi sidik jari via handleBiometricLogin.
+            // Sesi lama tanpa field ini (undefined) dianggap masih aktif (kompatibel ke belakang).
+            if (session.loggedIn !== false) {
+              setAppUser(match);
+            }
           } else {
             clearSession();
             setBiometricLoginEnabledState(false);
@@ -163,7 +169,7 @@ export const useAppData = () => {
         .map(doc => ({ id: doc.id, ...doc.data() }))
         .filter(l => l.startDate <= endDate);
 
-      return mergeAttendanceWithLocks(attData, lockData, startDate, endDate);
+      return mergeAttendanceWithLocks(attData, lockData, startDate, endDate, holidays);
     } catch (error) {
       console.error("Error fetching range:", error);
       return [];
@@ -176,7 +182,7 @@ export const useAppData = () => {
       setAppUser(user);
       // Login manual SELALU mulai dari flag biometricEnabled=false —
       // pengguna harus menyalakannya lagi secara sadar lewat menu Pengaturan.
-      saveSession({ ...user, biometricEnabled: false });
+      saveSession({ ...user, biometricEnabled: false, loggedIn: true });
       setBiometricLoginEnabledState(false);
       return true;
     }
@@ -190,6 +196,9 @@ export const useAppData = () => {
     if (!session?.biometricEnabled) return false;
     const match = employees.find(u => u.id === session.id && u.username === session.username && u.password === session.password);
     if (match) {
+      // Tandai sesi aktif lagi (loggedIn:true) supaya kalau aplikasi ditutup-buka
+      // tanpa logout eksplisit berikutnya, tetap auto-login seperti biasa.
+      await saveSession({ ...session, loggedIn: true });
       setAppUser(match);
       return true;
     }
@@ -198,18 +207,27 @@ export const useAppData = () => {
     return false;
   };
 
-  // Dipakai toggle "Aktifkan Login Sidik Jari" di menu Pengaturan.
+  // Dipakai toggle "Aktifkan Login Sidik Jari" di menu Profil/Pengaturan.
   const setBiometricLoginEnabled = async (enabled) => {
     if (!appUser) return false;
-    await saveSession({ ...appUser, biometricEnabled: enabled });
+    await saveSession({ ...appUser, biometricEnabled: enabled, loggedIn: true });
     setBiometricLoginEnabledState(enabled);
     return true;
   };
 
-  const handleAppLogout = () => {
+  // Logout: kalau login sidik jari SEDANG AKTIF, sesi & kredensial TETAP disimpan
+  // (hanya ditandai loggedIn:false) supaya login berikutnya cukup pakai sidik jari
+  // tanpa mengetik ulang username/password. Kalau biometrik tidak aktif, sesi
+  // dihapus total seperti semula -> wajib login manual.
+  const handleAppLogout = async () => {
     setAppUser(null);
-    clearSession();
-    setBiometricLoginEnabledState(false);
+    if (biometricLoginEnabled) {
+      const session = await loadSession();
+      if (session) await saveSession({ ...session, loggedIn: false });
+    } else {
+      clearSession();
+      setBiometricLoginEnabledState(false);
+    }
   };
 
   return {

@@ -95,6 +95,15 @@ export const calcJamKerja = (startIso, endIso) => {
   return Math.round((diffMs / 3600000) * 10) / 10;
 };
 
+// --- Hari non-efektif (bukan hari kerja): Sabtu/Minggu otomatis libur akhir
+// pekan, atau tanggal yang terdaftar sebagai hari libur nasional/cuti bersama. ---
+export const isNonEffectiveDate = (dateStr, holidays = []) => {
+  const d = new Date(`${dateStr}T00:00:00`);
+  const isWeekend = d.getDay() === 0 || d.getDay() === 6;
+  const holiday = holidays.find(h => h.date === dateStr) || null;
+  return { isNonEffective: isWeekend || !!holiday, isWeekend, holiday };
+};
+
 // --- SECURITY UPDATE: Fetch Real Server Time ---
 export const fetchServerTime = async () => {
   try {

@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Users, UserCheck, XCircle, Activity, FileText, Calendar, Briefcase } from 'lucide-react';
 import { getTodayString, DEFAULT_LOGO_URL } from '../../utils/helpers';
 import { getDailyStats } from '../../utils/statistics'; // Import Logic Baru
 
-export default function AdminDashboard({ employees, attendance, statusLocks = [], settings }) {
+export default function AdminDashboard({ employees, attendance, statusLocks = [], settings, holidays = [] }) {
   const [date, setDate] = useState(getTodayString());
   const [session, setSession] = useState(() => {
      const h = new Date().getHours();
@@ -11,7 +11,7 @@ export default function AdminDashboard({ employees, attendance, statusLocks = []
   });
 
   // GUNAKAN LOGIC TERPUSAT (dengan kunci status admin)
-  const { counts } = getDailyStats(date, session, employees, attendance, statusLocks);
+  const { counts } = getDailyStats(date, session, employees, attendance, statusLocks, holidays);
 
   return (
     <div className="p-2 md:p-6 animate-in fade-in duration-500">

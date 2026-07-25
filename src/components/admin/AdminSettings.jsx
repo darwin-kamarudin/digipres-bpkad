@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { UserCheck, Trash2, Plus, Shield, Users, Printer, Save, Lock, Upload, FileDown, Edit, X, CheckSquare, Clock, MapPin, Crosshair, Smartphone, Globe } from 'lucide-react';
+import { UserCheck, Trash2, Plus, Shield, Users, Printer, Save, Lock, Upload, FileDown, Edit, X, CheckSquare, Clock, MapPin, Crosshair, Smartphone, Globe, Link2 } from 'lucide-react';
 import { updateDoc, doc, addDoc, writeBatch, deleteDoc } from 'firebase/firestore';
 import { db, getCollectionPath } from '../../lib/firebase';
 import { formatDateIndo, DEFAULT_LOGO_URL } from '../../utils/helpers';
@@ -567,6 +567,7 @@ function TabModeAplikasi({ settings, isReadOnly }) {
     // berubah) — pola yang sama dipakai di TabGeoLocation untuk menghindari toggle
     // yang baru diubah tertimpa balik oleh snapshot Firestore yang datang di tengah edit.
     const [mobileOnlyAbsensi, setMobileOnlyAbsensi] = useState(settings.mobileOnlyAbsensi ?? false);
+    const [androidDownloadUrl, setAndroidDownloadUrl] = useState(settings.androidDownloadUrl ?? '');
     const [saving, setSaving] = useState(false);
 
     const handleSave = async () => {
@@ -577,7 +578,7 @@ function TabModeAplikasi({ settings, isReadOnly }) {
         }
         setSaving(true);
         try {
-            await updateDoc(doc(getCollectionPath('settings'), settings.id), { mobileOnlyAbsensi });
+            await updateDoc(doc(getCollectionPath('settings'), settings.id), { mobileOnlyAbsensi, androidDownloadUrl: androidDownloadUrl.trim() });
             alert('Pengaturan Mode Aplikasi berhasil disimpan.');
         } catch (error) {
             console.error(error);
@@ -628,6 +629,24 @@ function TabModeAplikasi({ settings, isReadOnly }) {
                         <p className="text-xs text-slate-500 mt-1">Selalu diizinkan untuk absensi.</p>
                     </div>
                 </div>
+            </div>
+
+            <div className="border p-4 rounded-lg bg-white shadow-sm">
+                <label className="text-sm font-bold text-slate-700 flex items-center gap-2 mb-2">
+                    <Link2 size={16} className="text-red-600"/> Link Download Aplikasi Android
+                </label>
+                <p className="text-xs text-slate-500 mb-3">
+                    Ditampilkan ke pegawai saat mereka mencoba absen lewat browser padahal "Wajib Aplikasi Mobile" sedang aktif.
+                    Saat ini hanya mendukung OS Android.
+                </p>
+                <input
+                    type="url"
+                    value={androidDownloadUrl}
+                    onChange={e => setAndroidDownloadUrl(e.target.value)}
+                    disabled={isReadOnly}
+                    placeholder="https://contoh.com/download/digipres.apk"
+                    className="w-full p-2.5 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-red-600 disabled:opacity-50 disabled:bg-slate-50"
+                />
             </div>
 
             {!isReadOnly && (

@@ -245,22 +245,33 @@ export default function UserAbsensi({ user, attendance, holidays, settings }) {
      }
   };
 
-  // Mode Aplikasi: jika admin mewajibkan absensi lewat aplikasi mobile, blokir akses via browser/web view
+  // Mode Aplikasi: jika admin mewajibkan absensi lewat aplikasi mobile, blokir akses via browser/web view.
+  // Ini adalah lapisan pertahanan kedua (kalau ada yang membuka URL ini langsung) —
+  // jalur normalnya sudah dicegat lebih dulu oleh MobileOnlyModal di UserHome.jsx.
   if (settings?.mobileOnlyAbsensi && !isNativePlatform()) {
     return (
       <div className="flex flex-col min-h-full items-center justify-center text-center p-8 safe-top">
         <div className="w-20 h-20 rounded-full bg-red-100 flex items-center justify-center mb-5">
           <Smartphone size={40} className="text-red-600" />
         </div>
-        <h2 className="text-xl font-bold text-slate-800 mb-2">Wajib Gunakan Aplikasi Mobile</h2>
+        <h2 className="text-xl font-bold text-slate-800 mb-2">Absensi Hanya Bisa Dilakukan Menggunakan Aplikasi</h2>
         <p className="text-sm text-slate-500 max-w-xs">
-          Absensi untuk instansi ini hanya dapat dilakukan melalui aplikasi mobile resmi.
-          Silakan unduh &amp; buka aplikasi mobile untuk melakukan absensi.
+          Instansi Anda mewajibkan absensi lewat aplikasi mobile resmi. Silakan unduh &amp; buka aplikasinya untuk melakukan absensi.
         </p>
+        {settings?.androidDownloadUrl && (
+          <a
+            href={settings.androidDownloadUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full max-w-xs mt-8 flex items-center justify-center gap-2 bg-red-700 active:bg-red-800 text-white font-bold py-3.5 rounded-xl shadow-lg transition-colors"
+          >
+            <Smartphone size={18} /> Download Aplikasi (Android)
+          </a>
+        )}
         <button
           type="button"
           onClick={() => navigate('/')}
-          className="w-full max-w-xs mt-8 flex items-center justify-center gap-2 bg-slate-100 active:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-xl transition-colors"
+          className="w-full max-w-xs mt-4 flex items-center justify-center gap-2 bg-slate-100 active:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-xl transition-colors"
         >
           <Home size={18} /> Kembali ke Beranda
         </button>
