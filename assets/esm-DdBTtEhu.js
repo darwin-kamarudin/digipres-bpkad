@@ -1,0 +1,2 @@
+const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/web-3H-lTqTN.js","assets/index-BGN2VhZK.js","assets/index-C9MuijL_.css"])))=>i.map(i=>d[i]);
+import{c as e,l as t}from"./index-BGN2VhZK.js";var n=e(`Printer`,{web:()=>t(()=>import(`./web-3H-lTqTN.js`).then(e=>new e.PrinterWeb),__vite__mapDeps([0,1,2]))});export{n as Printer};
