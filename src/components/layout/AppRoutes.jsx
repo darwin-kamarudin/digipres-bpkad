@@ -38,15 +38,15 @@ export default function AppRoutes({
                     : <AdminDashboard employees={employees} attendance={attendance} statusLocks={statusLocks} settings={settings} holidays={holidays} />
                 } />
                 <Route path="/manajemen-absensi" element={mobileNativeAdmin
-                    ? <AdminMobileManajemenAbsensi employees={employees} statusLocks={statusLocks} />
-                    : <AdminManajemenAbsensi employees={employees} statusLocks={statusLocks} />
+                    ? <AdminMobileManajemenAbsensi employees={employees} statusLocks={statusLocks} attendance={attendance} />
+                    : <AdminManajemenAbsensi employees={employees} statusLocks={statusLocks} attendance={attendance} />
                 } />
                 <Route path="/laporan-harian" element={mobileNativeAdmin
                     ? <AdminMobileLaporanHarian employees={employees} attendance={attendance} statusLocks={statusLocks} settings={settings} holidays={holidays} />
                     : <AdminLaporanHarian employees={employees} attendance={attendance} statusLocks={statusLocks} settings={settings} holidays={holidays} />
                 } />
                 <Route path="/laporan-bulanan" element={<AdminRekapanBulanan employees={employees} attendance={attendance} settings={settings} user={appUser} holidays={holidays} fetchAttendanceByRange={fetchAttendanceByRange} />} />
-                <Route path="/rekapan-tahunan" element={<AdminRekapanTahunan employees={employees} attendance={attendance} settings={settings} fetchAttendanceByRange={fetchAttendanceByRange} />} />
+                <Route path="/rekapan-tahunan" element={<AdminRekapanTahunan employees={employees} attendance={attendance} settings={settings} holidays={holidays} fetchAttendanceByRange={fetchAttendanceByRange} />} />
                 <Route path="/cetak-manual" element={<AdminCetakAbsensiManual employees={employees} settings={settings} holidays={holidays} />} />
                 <Route path="/data-pegawai" element={<AdminDataPegawai employees={employees} currentUser={appUser} />} />
                 <Route path="/settings" element={<AdminSettings settings={settings} holidays={holidays} employees={employees} user={appUser} />} />

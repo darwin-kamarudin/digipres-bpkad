@@ -19,7 +19,22 @@ const statusBadgeColor = (statusText) => {
   }
 };
 
-export default function AdminManajemenAbsensi({ employees, statusLocks = [] }) {
+// Cari pegawai terpilih yang SUDAH punya absensi ASLI (self check-in) di rentang
+// tanggal yang mau dikunci. Absensi asli selalu menang atas kunci admin per sesi
+// (lihat mergeAttendanceWithLocks di utils/statistics.js) — jadi kalau ada bentrok,
+// status kunci baru TIDAK akan berlaku untuk sesi yang sudah ada absensi aslinya.
+const findAttendanceConflicts = (attendance, selectedIds, startDate, endDate) => {
+  const conflicts = new Map(); // userId -> Set tanggal
+  attendance.forEach((a) => {
+    if (selectedIds.includes(a.userId) && a.date >= startDate && a.date <= endDate) {
+      if (!conflicts.has(a.userId)) conflicts.set(a.userId, new Set());
+      conflicts.get(a.userId).add(a.date);
+    }
+  });
+  return conflicts;
+};
+
+export default function AdminManajemenAbsensi({ employees, statusLocks = [], attendance = [] }) {
   const [status, setStatus] = useState('Izin');
   const [startDate, setStartDate] = useState(getTodayString());
   const [endDate, setEndDate] = useState(getTodayString());
@@ -79,6 +94,20 @@ export default function AdminManajemenAbsensi({ employees, statusLocks = [] }) {
     e.preventDefault();
     if (selectedIds.length === 0) return alert('Pilih setidaknya satu pegawai!');
     if (endDate < startDate) return alert('Tanggal selesai tidak boleh sebelum tanggal mulai.');
+
+    const conflicts = findAttendanceConflicts(attendance, selectedIds, startDate, endDate);
+    if (conflicts.size > 0) {
+      const lines = [...conflicts.entries()].map(([uid, dates]) => {
+        const emp = employees.find(e => e.id === uid);
+        return `- ${emp?.nama || uid}: ${[...dates].sort().map(formatDateIndo).join(', ')}`;
+      });
+      const proceed = confirm(
+        `Perhatian: pegawai berikut sudah punya absensi ASLI (self check-in) pada sebagian tanggal di rentang ini. ` +
+        `Absensi asli selalu diprioritaskan, jadi status kunci "${status}" TIDAK akan berlaku pada tanggal tersebut:\n\n` +
+        `${lines.join('\n')}\n\nLanjutkan mengunci untuk tanggal lain yang belum ada absensi?`
+      );
+      if (!proceed) return;
+    }
 
     setIsSubmitting(true);
     try {

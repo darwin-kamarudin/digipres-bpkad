@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Download, Printer, Calendar, UserCheck, Loader2 } from 'lucide-react';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
+import { getTodayString, isNonEffectiveDate } from '../../utils/helpers';
 
 // TAMBAHKAN fetchAttendanceByRange KE PROPS
 export default function AdminRekapanBulanan({ employees, settings, user, holidays = [], fetchAttendanceByRange }) {
@@ -69,19 +70,37 @@ export default function AdminRekapanBulanan({ employees, settings, user, holiday
         return a.userId === empId;
     });
 
+    // Hari NON-EFEKTIF (Sabtu/Minggu/libur admin) TIDAK dihitung untuk status apa
+    // pun (Hadir/Sakit/Izin/Cuti/DL/Alpa) — bukan hari kerja jadi tidak masuk rekap,
+    // meski secara kebetulan ada catatan absensi asli tercatat di tanggal tersebut.
     const countStatus = (statusKey) => {
         const uniqueDays = new Set(
-            empAttendance.filter(a => a.status === statusKey).map(a => a.date)
+            empAttendance
+                .filter(a => a.status === statusKey && !isNonEffectiveDate(a.date, holidays).isNonEffective)
+                .map(a => a.date)
         );
         return uniqueDays.size;
     };
+
+    // Alpa: hari EFEKTIF (bukan Sabtu/Minggu/libur) dalam bulan ini, s/d hari ini
+    // (tanggal masa depan belum dihitung), yang TIDAK punya catatan absensi sama sekali.
+    const recordedDates = new Set(empAttendance.map(a => a.date));
+    const today = getTodayString();
+    let alpaCount = 0;
+    for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = getAbsenceDate(d);
+        if (dateStr > today) break;
+        if (isNonEffectiveDate(dateStr, holidays).isNonEffective) continue;
+        if (!recordedDates.has(dateStr)) alpaCount++;
+    }
 
     return {
         H: countStatus('Hadir'),
         S: countStatus('Sakit'),
         I: countStatus('Izin'),
         C: countStatus('Cuti'),
-        DL: countStatus('Dinas Luar')
+        DL: countStatus('Dinas Luar'),
+        A: alpaCount
     };
   };
 
@@ -97,10 +116,10 @@ export default function AdminRekapanBulanan({ employees, settings, user, holiday
         { header: '', key: 'nama', width: 35 },
     ];
     daysArray.forEach(() => columns.push({ header: '', width: 4 }));
-    ['H', 'S', 'I', 'C', 'DL'].forEach(() => columns.push({ header: '', width: 5 }));
-    
+    ['H', 'S', 'I', 'C', 'DL', 'A'].forEach(() => columns.push({ header: '', width: 5 }));
+
     worksheet.columns = columns;
-    const lastColIndex = 2 + daysInMonth + 5; 
+    const lastColIndex = 2 + daysInMonth + 6;
 
     try {
         if (settings.logoUrl) {
@@ -163,12 +182,12 @@ export default function AdminRekapanBulanan({ employees, settings, user, holiday
         cell.alignment = { horizontal: 'center' };
     });
 
-    ['H', 'S', 'I', 'C', 'DL'].forEach((lbl, i) => {
+    ['H', 'S', 'I', 'C', 'DL', 'A'].forEach((lbl, i) => {
         const cell = worksheet.getCell(hRow + 1, 3 + daysInMonth + i);
         cell.value = lbl;
         cell.font = { bold: true };
         cell.alignment = { horizontal: 'center' };
-        const colors = ['FFC6EFCE', 'FFFFEB9C', 'FFB3C6E7', 'FFE2C6E6', 'FFF7CBAC'];
+        const colors = ['FFC6EFCE', 'FFFFEB9C', 'FFB3C6E7', 'FFE2C6E6', 'FFF7CBAC', 'FFFFC7CE'];
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors[i] } };
     });
 
@@ -243,8 +262,9 @@ export default function AdminRekapanBulanan({ employees, settings, user, holiday
         row.getCell(startTotal+2).value = stats.I;
         row.getCell(startTotal+3).value = stats.C;
         row.getCell(startTotal+4).value = stats.DL;
+        row.getCell(startTotal+5).value = stats.A;
 
-        ['FFC6EFCE', 'FFFFEB9C', 'FFB3C6E7', 'FFE2C6E6', 'FFF7CBAC'].forEach((color, i) => {
+        ['FFC6EFCE', 'FFFFEB9C', 'FFB3C6E7', 'FFE2C6E6', 'FFF7CBAC', 'FFFFC7CE'].forEach((color, i) => {
             const cell = row.getCell(startTotal + i);
             cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: color } };
             cell.alignment = { vertical: 'middle', horizontal: 'center' };
@@ -408,7 +428,7 @@ export default function AdminRekapanBulanan({ employees, settings, user, holiday
                         <th rowSpan="2" className="w-8 border border-black">No</th>
                         <th rowSpan="2" className="w-[1%] whitespace-nowrap px-2 border border-black">Nama Pegawai / NIP</th>
                         <th colSpan={daysInMonth} className="border border-black">Tanggal</th>
-                        <th colSpan="5" className="bg-slate-300 print:bg-slate-300 border border-black">Total</th>
+                        <th colSpan="6" className="bg-slate-300 print:bg-slate-300 border border-black">Total</th>
                     </tr>
                     <tr className="bg-slate-100 print:bg-slate-100">
                         {daysArray.map(d => <th key={d} className="w-6 border border-black">{d}</th>)}
@@ -417,6 +437,7 @@ export default function AdminRekapanBulanan({ employees, settings, user, holiday
                         <th className="w-8 bg-blue-100 print:bg-blue-100 border border-black">I</th>
                         <th className="w-8 bg-purple-100 print:bg-purple-100 border border-black">C</th>
                         <th className="w-8 bg-orange-100 print:bg-orange-100 border border-black">DL</th>
+                        <th className="w-8 bg-red-100 print:bg-red-100 border border-black">A</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -474,6 +495,7 @@ export default function AdminRekapanBulanan({ employees, settings, user, holiday
                                 <td className="font-bold bg-blue-50 print:bg-blue-50 border border-black">{stats.I}</td>
                                 <td className="font-bold bg-purple-50 print:bg-purple-50 border border-black">{stats.C}</td>
                                 <td className="font-bold bg-orange-50 print:bg-orange-50 border border-black">{stats.DL}</td>
+                                <td className="font-bold bg-red-50 print:bg-red-50 border border-black">{stats.A}</td>
                             </tr>
                         );
                     })}

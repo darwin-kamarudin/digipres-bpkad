@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Printer, FileDown, Search, X, ChevronDown, UserCheck, Loader2 } from 'lucide-react';
-import { DEFAULT_LOGO_URL } from '../../utils/helpers';
+import { DEFAULT_LOGO_URL, isNonEffectiveDate } from '../../utils/helpers';
 import { getYearlyStats } from '../../utils/statistics';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 
 // TAMBAHKAN fetchAttendanceByRange KE PROPS
-export default function AdminRekapanTahunan({ employees, settings, user, fetchAttendanceByRange }) {
+export default function AdminRekapanTahunan({ employees, settings, user, holidays = [], fetchAttendanceByRange }) {
   const startYear = 2024;
   const currentYear = new Date().getFullYear();
   const yearsList = [];
@@ -62,7 +62,37 @@ export default function AdminRekapanTahunan({ employees, settings, user, fetchAt
   const secretary = employees.find(e => e.jabatan && e.jabatan.toLowerCase().includes('sekretaris') && !e.jabatan.toLowerCase().includes('staf'));
 
   // Gunakan reportData untuk statistik, bukan global attendance
-  const yearlyData = selectedEmployee ? getYearlyStats(year, reportData, selectedUserId) : [];
+  const yearlyData = selectedEmployee ? getYearlyStats(year, reportData, selectedUserId, [], holidays) : [];
+
+  // --- CATATAN RINGKASAN TAHUN ---
+  // 1) Kalender: total hari efektif vs non-efektif (Sabtu/Minggu/libur admin) di TAHUN
+  //    itu, terlepas dari data pegawai (murni struktur kalender).
+  const yearCalendarStats = (() => {
+    let effektif = 0, nonEfektif = 0;
+    for (let m = 1; m <= 12; m++) {
+      const lastDay = new Date(Number(year), m, 0).getDate();
+      for (let d = 1; d <= lastDay; d++) {
+        const dateStr = `${year}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        if (isNonEffectiveDate(dateStr, holidays).isNonEffective) nonEfektif++; else effektif++;
+      }
+    }
+    return { effektif, nonEfektif };
+  })();
+
+  // 2) Rekap pegawai terpilih setahun: Total Efektif Kinerja vs Total Non-Efektif
+  //    Kinerja (Alpa+Izin+Sakit+Cuti), dirinci per kategori.
+  // CATATAN: stats.Hadir/DL/Sakit/Izin/Cuti dihitung PER SESI (Pagi & Sore dihitung
+  // terpisah), jadi 1 hari penuh hadir menyumbang 2 (Pagi+Sore). Kolom "Total Hadir"
+  // SELALU menjumlahkan Hadir + Dinas Luar (DL dianggap hadir/efektif kinerja karena
+  // pegawai tetap bertugas, hanya di lapangan/luar kantor). Untuk mendapatkan jumlah
+  // HARI yang benar (bukan jumlah sesi), Total Hadir (Hadir+DL) dibagi 2.
+  const totalAlpaTahun = yearlyData.reduce((acc, m) => acc + m.alpa.p + m.alpa.s, 0);
+  const totalIzinTahun = yearlyData.reduce((acc, m) => acc + m.stats.Izin.p + m.stats.Izin.s, 0);
+  const totalSakitTahun = yearlyData.reduce((acc, m) => acc + m.stats.Sakit.p + m.stats.Sakit.s, 0);
+  const totalCutiTahun = yearlyData.reduce((acc, m) => acc + m.stats.Cuti.p + m.stats.Cuti.s, 0);
+  const totalHadirSesiTahun = yearlyData.reduce((acc, m) => acc + m.totalEfektif, 0);
+  const totalEfektifKinerja = Math.round((totalHadirSesiTahun / 2) * 10) / 10;
+  const totalNonEfektifKinerja = totalAlpaTahun + totalIzinTahun + totalSakitTahun + totalCutiTahun;
 
   const getFormattedDate = () => {
     return new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -108,10 +138,10 @@ export default function AdminRekapanTahunan({ employees, settings, user, fetchAt
         { header: '', width: 5 },
         { header: '', width: 20 },
     ];
-    for(let i=0; i<11; i++) columns.push({ header: '', width: 8 });
-    
+    for(let i=0; i<13; i++) columns.push({ header: '', width: 8 });
+
     worksheet.columns = columns;
-    const lastColIndex = 13;
+    const lastColIndex = 15;
 
     try {
         if (settings.logoUrl) {
@@ -182,22 +212,22 @@ export default function AdminRekapanTahunan({ employees, settings, user, fetchAt
     worksheet.mergeCells(hRow, 1, subHRow, 1); worksheet.getCell(hRow, 1).value = "No";
     worksheet.mergeCells(hRow, 2, subHRow, 2); worksheet.getCell(hRow, 2).value = "Bulan";
     
-    const categories = ['Hadir', 'Sakit', 'Izin', 'Cuti', 'DL'];
+    const categories = ['Hadir', 'DL', 'Sakit', 'Izin', 'Cuti', 'Alpa'];
     categories.forEach((cat, idx) => {
         const startCol = 3 + (idx * 2);
         worksheet.mergeCells(hRow, startCol, hRow, startCol + 1);
         worksheet.getCell(hRow, startCol).value = cat;
     });
-    worksheet.mergeCells(hRow, 13, subHRow, 13); worksheet.getCell(hRow, 13).value = "Total";
+    worksheet.mergeCells(hRow, 15, subHRow, 15); worksheet.getCell(hRow, 15).value = "Total Hadir";
 
-    const colors = ['FFC6EFCE', 'FFFFEB9C', 'FFB3C6E7', 'FFE2C6E6', 'FFF7CBAC'];
-    for (let i = 0; i < 5; i++) {
+    const colors = ['FFC6EFCE', 'FFF7CBAC', 'FFFFEB9C', 'FFB3C6E7', 'FFE2C6E6', 'FFFFC7CE'];
+    for (let i = 0; i < 6; i++) {
         const startCol = 3 + (i * 2);
         const cellP = worksheet.getCell(subHRow, startCol);
-        cellP.value = "Pagi"; 
+        cellP.value = "Pagi";
         cellP.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors[i] } };
         const cellS = worksheet.getCell(subHRow, startCol + 1);
-        cellS.value = "Sore"; 
+        cellS.value = "Sore";
         cellS.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors[i] } };
     }
 
@@ -219,22 +249,28 @@ export default function AdminRekapanTahunan({ employees, settings, user, fetchAt
         const stats = data.stats;
         row.getCell(3).value = stats.Hadir.p;
         row.getCell(4).value = stats.Hadir.s;
-        row.getCell(5).value = stats.Sakit.p;
-        row.getCell(6).value = stats.Sakit.s;
-        row.getCell(7).value = stats.Izin.p;
-        row.getCell(8).value = stats.Izin.s;
-        row.getCell(9).value = stats.Cuti.p;
-        row.getCell(10).value = stats.Cuti.s;
-        row.getCell(11).value = stats['Dinas Luar'].p;
-        row.getCell(12).value = stats['Dinas Luar'].s;
-        row.getCell(13).value = data.totalHadir;
+        row.getCell(5).value = stats['Dinas Luar'].p;
+        row.getCell(6).value = stats['Dinas Luar'].s;
+        row.getCell(7).value = stats.Sakit.p;
+        row.getCell(8).value = stats.Sakit.s;
+        row.getCell(9).value = stats.Izin.p;
+        row.getCell(10).value = stats.Izin.s;
+        row.getCell(11).value = stats.Cuti.p;
+        row.getCell(12).value = stats.Cuti.s;
+        row.getCell(13).value = data.alpa.p;
+        row.getCell(14).value = data.alpa.s;
+        row.getCell(15).value = data.totalEfektif;
 
         for(let c=1; c<=lastColIndex; c++) {
             const cell = row.getCell(c);
             cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
             cell.alignment = { vertical: 'middle', horizontal: 'center' };
             if(c === 2) cell.alignment = { vertical: 'middle', horizontal: 'left' };
-            if(c === 13) {
+            if(c === 13 || c === 14) {
+                cell.font = { bold: true };
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFC7CE' } };
+            }
+            if(c === 15) {
                 cell.font = { bold: true };
                 cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2F2F2' } };
             }
@@ -251,15 +287,14 @@ export default function AdminRekapanTahunan({ employees, settings, user, fetchAt
     const sums = [
         yearlyData.reduce((a, b) => a + b.stats.Hadir.p, 0),
         yearlyData.reduce((a, b) => a + b.stats.Hadir.s, 0),
+        yearlyData.reduce((a, b) => a + b.stats['Dinas Luar'].p, 0),
+        yearlyData.reduce((a, b) => a + b.stats['Dinas Luar'].s, 0),
         yearlyData.reduce((a, b) => a + b.stats.Sakit.p, 0),
         yearlyData.reduce((a, b) => a + b.stats.Sakit.s, 0),
         yearlyData.reduce((a, b) => a + b.stats.Izin.p, 0),
         yearlyData.reduce((a, b) => a + b.stats.Izin.s, 0),
         yearlyData.reduce((a, b) => a + b.stats.Cuti.p, 0),
-        yearlyData.reduce((a, b) => a + b.stats.Cuti.s, 0),
-        yearlyData.reduce((a, b) => a + b.stats['Dinas Luar'].p, 0),
-        yearlyData.reduce((a, b) => a + b.stats['Dinas Luar'].s, 0),
-        yearlyData.reduce((a, b) => a + b.totalHadir, 0)
+        yearlyData.reduce((a, b) => a + b.stats.Cuti.s, 0)
     ];
 
     sums.forEach((sum, idx) => {
@@ -269,13 +304,22 @@ export default function AdminRekapanTahunan({ employees, settings, user, fetchAt
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0E0E0' } };
     });
 
+    totalRow.getCell(13).value = yearlyData.reduce((a, b) => a + b.alpa.p, 0);
+    totalRow.getCell(14).value = yearlyData.reduce((a, b) => a + b.alpa.s, 0);
+    totalRow.getCell(15).value = yearlyData.reduce((a, b) => a + b.totalEfektif, 0);
+    [13, 14, 15].forEach((c) => {
+        const cell = totalRow.getCell(c);
+        cell.font = { bold: true };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0E0E0' } };
+    });
+
     for(let c=1; c<=lastColIndex; c++) {
         totalRow.getCell(c).border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
     }
 
     const signRow = currentRow + 3;
-    const rightStart = 9; 
-    const rightEnd = 13;
+    const rightStart = 11;
+    const rightEnd = 15;
 
     if (showSecretary) {
         worksheet.mergeCells(signRow, 2, signRow, 5);
@@ -455,18 +499,20 @@ export default function AdminRekapanTahunan({ employees, settings, user, fetchAt
                        <th className="border border-black p-1 align-middle w-10" rowSpan="2">No</th>
                        <th className="border border-black p-1 align-middle text-left w-[1%] whitespace-nowrap" rowSpan="2">Bulan</th>
                        <th className="border border-black p-1 text-center w-auto" colSpan="2">Hadir</th>
+                       <th className="border border-black p-1 text-center w-auto" colSpan="2">DL</th>
                        <th className="border border-black p-1 text-center w-auto" colSpan="2">Sakit</th>
                        <th className="border border-black p-1 text-center w-auto" colSpan="2">Izin</th>
                        <th className="border border-black p-1 text-center w-auto" colSpan="2">Cuti</th>
-                       <th className="border border-black p-1 text-center w-auto" colSpan="2">DL</th>
+                       <th className="border border-black p-1 text-center w-auto" colSpan="2">Alpa</th>
                        <th className="border border-black p-1 text-center w-16" rowSpan="2">Total Hadir</th>
                     </tr>
                     <tr className="bg-slate-50 print:bg-transparent text-[10px] uppercase text-center">
                        <th className="border border-black p-0.5 bg-green-50 print:bg-transparent">Pagi</th><th className="border border-black p-0.5 bg-green-100 print:bg-transparent">Sore</th>
+                       <th className="border border-black p-0.5 bg-orange-50 print:bg-transparent">Pagi</th><th className="border border-black p-0.5 bg-orange-100 print:bg-transparent">Sore</th>
                        <th className="border border-black p-0.5 bg-yellow-50 print:bg-transparent">Pagi</th><th className="border border-black p-0.5 bg-yellow-100 print:bg-transparent">Sore</th>
                        <th className="border border-black p-0.5 bg-blue-50 print:bg-transparent">Pagi</th><th className="border border-black p-0.5 bg-blue-100 print:bg-transparent">Sore</th>
                        <th className="border border-black p-0.5 bg-purple-50 print:bg-transparent">Pagi</th><th className="border border-black p-0.5 bg-purple-100 print:bg-transparent">Sore</th>
-                       <th className="border border-black p-0.5 bg-orange-50 print:bg-transparent">Pagi</th><th className="border border-black p-0.5 bg-orange-100 print:bg-transparent">Sore</th>
+                       <th className="border border-black p-0.5 bg-red-50 print:bg-transparent">Pagi</th><th className="border border-black p-0.5 bg-red-100 print:bg-transparent">Sore</th>
                     </tr>
                  </thead>
                  <tbody>
@@ -475,29 +521,42 @@ export default function AdminRekapanTahunan({ employees, settings, user, fetchAt
                           <td className="border border-black p-1 text-center">{i+1}</td>
                           <td className="border border-black p-1 font-bold whitespace-nowrap">{data.monthName}</td>
                           <td className="border border-black p-1 text-center bg-green-50 print:bg-transparent">{data.stats.Hadir.p}</td><td className="border border-black p-1 text-center bg-green-100 print:bg-transparent">{data.stats.Hadir.s}</td>
+                          <td className="border border-black p-1 text-center bg-orange-50 print:bg-transparent">{data.stats['Dinas Luar'].p}</td><td className="border border-black p-1 text-center bg-orange-100 print:bg-transparent">{data.stats['Dinas Luar'].s}</td>
                           <td className="border border-black p-1 text-center bg-yellow-50 print:bg-transparent">{data.stats.Sakit.p}</td><td className="border border-black p-1 text-center bg-yellow-100 print:bg-transparent">{data.stats.Sakit.s}</td>
                           <td className="border border-black p-1 text-center bg-blue-50 print:bg-transparent">{data.stats.Izin.p}</td><td className="border border-black p-1 text-center bg-blue-100 print:bg-transparent">{data.stats.Izin.s}</td>
                           <td className="border border-black p-1 text-center bg-purple-50 print:bg-transparent">{data.stats.Cuti.p}</td><td className="border border-black p-1 text-center bg-purple-100 print:bg-transparent">{data.stats.Cuti.s}</td>
-                          <td className="border border-black p-1 text-center bg-orange-50 print:bg-transparent">{data.stats['Dinas Luar'].p}</td><td className="border border-black p-1 text-center bg-orange-100 print:bg-transparent">{data.stats['Dinas Luar'].s}</td>
-                          <td className="border border-black p-1 text-center font-bold bg-slate-100 print:bg-transparent">{data.totalHadir}</td>
+                          <td className="border border-black p-1 text-center font-bold bg-red-50 print:bg-transparent">{data.alpa.p}</td><td className="border border-black p-1 text-center font-bold bg-red-100 print:bg-transparent">{data.alpa.s}</td>
+                          <td className="border border-black p-1 text-center font-bold bg-slate-100 print:bg-transparent">{data.totalEfektif}</td>
                        </tr>
                     ))}
                     <tr className="bg-gray-200 print:bg-gray-100 font-bold border-t-2 border-black">
                         <td colSpan="2" className="border border-black p-1 text-right pr-4">TOTAL TAHUNAN</td>
                         <td className="border border-black p-1 text-center">{yearlyData.reduce((acc, curr) => acc + curr.stats.Hadir.p, 0)}</td>
                         <td className="border border-black p-1 text-center">{yearlyData.reduce((acc, curr) => acc + curr.stats.Hadir.s, 0)}</td>
+                        <td className="border border-black p-1 text-center">{yearlyData.reduce((acc, curr) => acc + curr.stats['Dinas Luar'].p, 0)}</td>
+                        <td className="border border-black p-1 text-center">{yearlyData.reduce((acc, curr) => acc + curr.stats['Dinas Luar'].s, 0)}</td>
                         <td className="border border-black p-1 text-center">{yearlyData.reduce((acc, curr) => acc + curr.stats.Sakit.p, 0)}</td>
                         <td className="border border-black p-1 text-center">{yearlyData.reduce((acc, curr) => acc + curr.stats.Sakit.s, 0)}</td>
                         <td className="border border-black p-1 text-center">{yearlyData.reduce((acc, curr) => acc + curr.stats.Izin.p, 0)}</td>
                         <td className="border border-black p-1 text-center">{yearlyData.reduce((acc, curr) => acc + curr.stats.Izin.s, 0)}</td>
                         <td className="border border-black p-1 text-center">{yearlyData.reduce((acc, curr) => acc + curr.stats.Cuti.p, 0)}</td>
                         <td className="border border-black p-1 text-center">{yearlyData.reduce((acc, curr) => acc + curr.stats.Cuti.s, 0)}</td>
-                        <td className="border border-black p-1 text-center">{yearlyData.reduce((acc, curr) => acc + curr.stats['Dinas Luar'].p, 0)}</td>
-                        <td className="border border-black p-1 text-center">{yearlyData.reduce((acc, curr) => acc + curr.stats['Dinas Luar'].s, 0)}</td>
-                        <td className="border border-black p-1 text-center">{yearlyData.reduce((acc, curr) => acc + curr.totalHadir, 0)}</td>
+                        <td className="border border-black p-1 text-center">{yearlyData.reduce((acc, curr) => acc + curr.alpa.p, 0)}</td>
+                        <td className="border border-black p-1 text-center">{yearlyData.reduce((acc, curr) => acc + curr.alpa.s, 0)}</td>
+                        <td className="border border-black p-1 text-center">{yearlyData.reduce((acc, curr) => acc + curr.totalEfektif, 0)}</td>
                     </tr>
                  </tbody>
               </table>
+
+              {/* CATATAN RINGKASAN TAHUN */}
+              <div className="mt-4 mb-6 text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded p-3 print:bg-transparent space-y-1">
+                 <p>
+                    <b>Total Hari Efektif Tahun {year}:</b> {yearCalendarStats.effektif + yearCalendarStats.nonEfektif} hari &minus; {yearCalendarStats.nonEfektif} hari non-efektif = <b>{yearCalendarStats.effektif} hari efektif</b>
+                 </p>
+                 <p>
+                    <b>Rekap {selectedEmployee.nama}:</b> Total Efektif Kinerja = <b>{totalEfektifKinerja}</b> hari &middot; Total Non Efektif Kinerja = <b>{totalNonEfektifKinerja}</b> hari (Alpa: {totalAlpaTahun}, Izin: {totalIzinTahun}, Sakit: {totalSakitTahun}, Cuti: {totalCutiTahun})
+                 </p>
+              </div>
 
               <div className="mt-4 flex justify-between text-center">
                 {showSecretary && showLeader && (

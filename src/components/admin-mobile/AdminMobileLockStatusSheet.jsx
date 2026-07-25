@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { X, Save } from 'lucide-react';
-import { formatDateIndo } from '../../utils/helpers';
+import { formatDateIndo, formatLocalDate } from '../../utils/helpers';
 
 const LOCKABLE_STATUS = ['Izin', 'Sakit', 'Cuti', 'Dinas Luar'];
 const DURATION_PRESETS = [
@@ -14,7 +14,7 @@ const DURATION_PRESETS = [
 const addDays = (dateStr, days) => {
   const d = new Date(`${dateStr}T00:00:00`);
   d.setDate(d.getDate() + (days - 1));
-  return d.toISOString().slice(0, 10);
+  return formatLocalDate(d);
 };
 
 // Sheet langkah ke-2 dari alur Manajemen Absensi mobile-native: setelah admin

@@ -44,13 +44,20 @@ export const formatDateNoWeekday = (dateStr) => {
   return new Date(dateStr).toLocaleDateString('id-ID', options);
 };
 
-export const getTodayString = (customDate = null) => {
-  const now = customDate || new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
+// Format objek Date jadi string YYYY-MM-DD berdasarkan tanggal LOKAL perangkat.
+// SENGAJA tidak pakai `date.toISOString().slice(0,10)` — itu mengonversi ke UTC
+// dan bisa MUNDUR SATU HARI untuk zona waktu positif seperti WIB/WITA/WIT
+// (mis. tengah malam lokal 2026-07-23T00:00:00 di UTC+8 jadi 2026-07-22T16:00Z),
+// yang pernah menyebabkan kunci status (Izin/Sakit/Cuti/DL) di Manajemen Absensi
+// "hilang" satu hari dari tanggal yang seharusnya di Laporan Harian.
+export const formatLocalDate = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 };
+
+export const getTodayString = (customDate = null) => formatLocalDate(customDate || new Date());
 
 export const getWeekNumber = (d) => {
     d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));

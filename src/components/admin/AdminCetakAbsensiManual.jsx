@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { Printer } from 'lucide-react';
-import { getTodayString, formatDateIndo, DEFAULT_LOGO_URL } from '../../utils/helpers';
+import { getTodayString, formatDateIndo, formatLocalDate, DEFAULT_LOGO_URL } from '../../utils/helpers';
 
 export default function AdminCetakAbsensiManual({ employees, settings, holidays }) {
   const [startDate, setStartDate] = useState(getTodayString());
   const [endDate, setEndDate] = useState(() => {
      const d = new Date();
      d.setDate(d.getDate() + 6); // Default 1 minggu kedepan
-     return d.toISOString().slice(0, 10);
+     return formatLocalDate(d);
   });
   
   const sortedEmployees = [...employees].filter(e=>e.role === 'user').sort((a, b) => {
@@ -128,7 +128,7 @@ export default function AdminCetakAbsensiManual({ employees, settings, holidays 
               <div className="text-center mb-4">
                 <h2 className="text-base font-bold uppercase underline">DAFTAR HADIR / ABSENSI MANUAL</h2>
                 <p className="font-bold text-xs uppercase">
-                    PERIODE: {formatDateIndo(week.labelStart.toISOString().slice(0,10))} s/d {formatDateIndo(week.labelEnd.toISOString().slice(0,10))}
+                    PERIODE: {formatDateIndo(formatLocalDate(week.labelStart))} s/d {formatDateIndo(formatLocalDate(week.labelEnd))}
                 </p>
               </div>
 
@@ -192,7 +192,7 @@ export default function AdminCetakAbsensiManual({ employees, settings, holidays 
 
                           {/* Render Kolom Absensi Kosong / Libur */}
                           {week.days.map((d, idx) => {
-                             const isoDate = d.toISOString().slice(0, 10);
+                             const isoDate = formatLocalDate(d);
                              const isHoliday = holidays.find(h => h.date === isoDate);
                              
                              if(isHoliday) {

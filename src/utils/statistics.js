@@ -1,4 +1,4 @@
-import { isNonEffectiveDate } from './helpers';
+import { isNonEffectiveDate, getTodayString, formatLocalDate } from './helpers';
 
 // ==========================================================================
 // KUNCI STATUS ADMIN (statusLocks)
@@ -27,7 +27,7 @@ const eachDateInRange = (startDate, endDate) => {
   const d = new Date(`${startDate}T00:00:00`);
   const end = new Date(`${endDate}T00:00:00`);
   while (d <= end) {
-    out.push(d.toISOString().slice(0, 10));
+    out.push(formatLocalDate(d));
     d.setDate(d.getDate() + 1);
   }
   return out;
@@ -219,13 +219,34 @@ export const getYearlyStats = (year, attendance, userId, statusLocks = [], holid
              }
         });
 
-        // Hitung total kehadiran efektif bulan ini
+        // Alpa: hari EFEKTIF bulan ini (bukan Sabtu/Minggu/libur admin), s/d hari ini
+        // (tanggal masa depan belum dihitung), dipecah per sesi (Pagi/Sore) supaya
+        // konsisten dengan kategori lain -> Alpa Pagi = sesi Pagi hari itu TIDAK
+        // punya catatan sama sekali (begitu juga Sore).
+        const todayStr = getTodayString();
+        const lastDayOfMonth = new Date(Number(year), Number(m.id), 0).getDate();
+        let alpaP = 0, alpaS = 0;
+        for (let d = 1; d <= lastDayOfMonth; d++) {
+            const dateStr = `${year}-${m.id}-${String(d).padStart(2, '0')}`;
+            if (dateStr > todayStr) break;
+            if (isNonEffectiveDate(dateStr, holidays).isNonEffective) continue;
+            const hasPagi = currentMonthLogs.some(l => l.date === dateStr && l.session === 'Pagi');
+            const hasSore = currentMonthLogs.some(l => l.date === dateStr && l.session === 'Sore');
+            if (!hasPagi) alpaP++;
+            if (!hasSore) alpaS++;
+        }
+
+        // Total Hadir (lama) & Total Efektif (baru) = Hadir + Dinas Luar.
         const totalHadir = stats.Hadir.p + stats.Hadir.s;
+        const totalDL = stats['Dinas Luar'].p + stats['Dinas Luar'].s;
+        const totalEfektif = totalHadir + totalDL;
 
         return {
             monthName: m.name,
             stats,
-            totalHadir
+            totalHadir,
+            alpa: { p: alpaP, s: alpaS },
+            totalEfektif
         };
     });
 

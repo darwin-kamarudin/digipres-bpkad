@@ -8,7 +8,7 @@ import {
   getDocs
 } from "firebase/firestore";
 import { auth, getCollectionPath } from '../lib/firebase';
-import { INITIAL_SETTINGS } from '../utils/helpers';
+import { INITIAL_SETTINGS, formatLocalDate } from '../utils/helpers';
 import { saveSession, loadSession, clearSession } from '../lib/localDb';
 import { mergeAttendanceWithLocks } from '../utils/statistics';
 
@@ -110,7 +110,7 @@ export const useAppData = () => {
     // C. Attendance (OPTIMASI: Hanya Bulan Ini)
     const today = new Date();
     // Ambil tanggal 1 bulan ini
-    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10);
+    const startOfMonth = formatLocalDate(new Date(today.getFullYear(), today.getMonth(), 1));
     
     const attendanceQuery = query(
       getCollectionPath('attendance'),
