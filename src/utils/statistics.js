@@ -1,4 +1,4 @@
-import { isNonEffectiveDate, getTodayString, formatLocalDate } from './helpers';
+import { isNonEffectiveDate, getTodayString, formatLocalDate, calcJamKerja } from './helpers';
 
 // ==========================================================================
 // KUNCI STATUS ADMIN (statusLocks)
@@ -251,4 +251,70 @@ export const getYearlyStats = (year, attendance, userId, statusLocks = [], holid
     });
 
     return statsByMonth;
+};
+
+// Fungsi Baru: Papan Peringkat Kehadiran — khusus panel pegawai. Mengembalikan
+// SELURUH pegawai terurut (bukan dipotong Top 10) — komponen pemanggil yang
+// memutuskan mau tampil 10 teratas atau seluruhnya (lihat UserAttendanceLeaderboard.jsx).
+// CATATAN: `attendance` DIHARAPKAN sudah hasil fetchAttendanceByRange (yakni
+// sudah tergabung dengan kunci status admin), jadi di sini TIDAK perlu
+// menggabungkan kunci lagi (beda dengan getDailyStats/getMonthlyStats yang
+// menerima attendance mentah + statusLocks terpisah).
+export const getAttendanceLeaderboard = (rangeStart, rangeEnd, employees, attendance, holidays = []) => {
+  const pegawaiOnly = employees.filter(e => e.role === 'user');
+  const todayStr = getTodayString();
+  const effectiveEnd = rangeEnd > todayStr ? todayStr : rangeEnd;
+
+  // Hari efektif dalam periode (Sabtu/Minggu/libur admin dilewati), dibatasi s/d hari ini.
+  const effectiveDates = [];
+  if (rangeStart <= effectiveEnd) {
+    const cursor = new Date(`${rangeStart}T00:00:00`);
+    const end = new Date(`${effectiveEnd}T00:00:00`);
+    while (cursor <= end) {
+      const dateStr = formatLocalDate(cursor);
+      if (!isNonEffectiveDate(dateStr, holidays).isNonEffective) effectiveDates.push(dateStr);
+      cursor.setDate(cursor.getDate() + 1);
+    }
+  }
+  const totalEffectiveDays = effectiveDates.length;
+
+  const board = pegawaiOnly.map((emp) => {
+    const logs = attendance.filter(l =>
+      l.userId === emp.id && l.date >= rangeStart && l.date <= effectiveEnd && l.statusApproval === 'approved'
+    );
+
+    // Persentase kehadiran keseluruhan: 1 hari dihitung sekali (Hadir ATAU Dinas Luar
+    // di sesi manapun pada hari itu), sama seperti logika Rekapan Bulanan pegawai.
+    const hadirDates = new Set(logs.filter(l => l.status === 'Hadir').map(l => l.date));
+    const dlDates = new Set(logs.filter(l => l.status === 'Dinas Luar').map(l => l.date));
+    const attendedDays = new Set([...hadirDates, ...dlDates]).size;
+    const percentage = totalEffectiveDays > 0
+      ? Math.min(100, Math.round((attendedDays / totalEffectiveDays) * 1000) / 10)
+      : 0;
+
+    // Rincian per sesi: berapa % hari Pagi & Sore terpenuhi (Hadir/Dinas Luar).
+    const pagiDates = new Set(logs.filter(l => l.session === 'Pagi' && (l.status === 'Hadir' || l.status === 'Dinas Luar')).map(l => l.date));
+    const soreDates = new Set(logs.filter(l => l.session === 'Sore' && (l.status === 'Hadir' || l.status === 'Dinas Luar')).map(l => l.date));
+    const pagiPercent = totalEffectiveDays > 0 ? Math.min(100, Math.round((pagiDates.size / totalEffectiveDays) * 1000) / 10) : 0;
+    const sorePercent = totalEffectiveDays > 0 ? Math.min(100, Math.round((soreDates.size / totalEffectiveDays) * 1000) / 10) : 0;
+
+    // Rata-rata jam kerja aktif/hari: hanya dihitung dari hari yang punya catatan
+    // ASLI Pagi & Sore (bertimestamp nyata) — record semu hasil kunci admin
+    // (fromLock:true) tidak punya timestamp sehingga otomatis tidak ikut terhitung.
+    let totalJam = 0, hariLengkap = 0;
+    effectiveDates.forEach((dateStr) => {
+      const pagiLog = logs.find(l => l.date === dateStr && l.session === 'Pagi' && l.timestamp);
+      const soreLog = logs.find(l => l.date === dateStr && l.session === 'Sore' && l.timestamp);
+      if (pagiLog && soreLog) {
+        const jam = calcJamKerja(pagiLog.timestamp, soreLog.timestamp);
+        if (jam > 0) { totalJam += jam; hariLengkap += 1; }
+      }
+    });
+    const avgJamKerja = hariLengkap > 0 ? Math.round((totalJam / hariLengkap) * 10) / 10 : 0;
+
+    return { emp, percentage, pagiPercent, sorePercent, avgJamKerja, attendedDays, totalEffectiveDays };
+  });
+
+  board.sort((a, b) => b.percentage - a.percentage || b.avgJamKerja - a.avgJamKerja || a.emp.nama.localeCompare(b.emp.nama));
+  return board;
 };

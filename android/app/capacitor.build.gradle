@@ -13,6 +13,7 @@ dependencies {
     implementation project(':capacitor-community-camera-preview')
     implementation project(':capacitor-app')
     implementation project(':capacitor-geolocation')
+    implementation project(':capacitor-splash-screen')
     implementation project(':capgo-capacitor-printer')
 
 }

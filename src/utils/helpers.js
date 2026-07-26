@@ -1,4 +1,7 @@
-export const DEFAULT_LOGO_URL = "https://play-lh.googleusercontent.com/FXc0mf6YaPS9bgd1JIUN8AHu-y53Ukbz0lW3hmD3F4CR9xXuMO6TrXqxqnm_-PcA9UfD=w600-h300-pc0xffffff-pd";
+// Asset lokal (dibundel di public/, sama seperti favicon) — BUKAN CDN eksternal,
+// supaya logo default tidak perlu menunggu fetch gambar dari internet saat
+// LoginPage tampil (terutama pada koneksi lambat/offline).
+export const DEFAULT_LOGO_URL = "/logo-pemda.svg";
 
 export const INITIAL_SETTINGS = {
   opdName: 'Badan Pengelolaan Keuangan dan Aset Daerah',

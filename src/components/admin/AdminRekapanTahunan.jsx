@@ -81,18 +81,29 @@ export default function AdminRekapanTahunan({ employees, settings, user, holiday
 
   // 2) Rekap pegawai terpilih setahun: Total Efektif Kinerja vs Total Non-Efektif
   //    Kinerja (Alpa+Izin+Sakit+Cuti), dirinci per kategori.
-  // CATATAN: stats.Hadir/DL/Sakit/Izin/Cuti dihitung PER SESI (Pagi & Sore dihitung
-  // terpisah), jadi 1 hari penuh hadir menyumbang 2 (Pagi+Sore). Kolom "Total Hadir"
-  // SELALU menjumlahkan Hadir + Dinas Luar (DL dianggap hadir/efektif kinerja karena
-  // pegawai tetap bertugas, hanya di lapangan/luar kantor). Untuk mendapatkan jumlah
-  // HARI yang benar (bukan jumlah sesi), Total Hadir (Hadir+DL) dibagi 2.
-  const totalAlpaTahun = yearlyData.reduce((acc, m) => acc + m.alpa.p + m.alpa.s, 0);
-  const totalIzinTahun = yearlyData.reduce((acc, m) => acc + m.stats.Izin.p + m.stats.Izin.s, 0);
-  const totalSakitTahun = yearlyData.reduce((acc, m) => acc + m.stats.Sakit.p + m.stats.Sakit.s, 0);
-  const totalCutiTahun = yearlyData.reduce((acc, m) => acc + m.stats.Cuti.p + m.stats.Cuti.s, 0);
+  // CATATAN: stats.Hadir/DL/Sakit/Izin/Cuti/alpa SEMUANYA dihitung PER SESI (Pagi &
+  // Sore dihitung terpisah), jadi 1 hari penuh menyumbang 2 (Pagi+Sore). Kolom "Total
+  // Hadir" SELALU menjumlahkan Hadir + Dinas Luar (DL dianggap hadir/efektif kinerja
+  // karena pegawai tetap bertugas, hanya di lapangan/luar kantor). Supaya SATUAN "hari"
+  // konsisten di seluruh catatan (Efektif MAUPUN Non-Efektif), jumlah sesi mentah untuk
+  // KEDUA sisi dibagi 2 di sini — bukan hanya Total Efektif seperti sebelumnya (dulu
+  // Non-Efektif/Alpa/Izin/Sakit/Cuti masih dalam satuan SESI, membuat angkanya tampak
+  // dua kali lipat lebih besar dari yang seharusnya).
+  const totalAlpaSesiTahun = yearlyData.reduce((acc, m) => acc + m.alpa.p + m.alpa.s, 0);
+  const totalIzinSesiTahun = yearlyData.reduce((acc, m) => acc + m.stats.Izin.p + m.stats.Izin.s, 0);
+  const totalSakitSesiTahun = yearlyData.reduce((acc, m) => acc + m.stats.Sakit.p + m.stats.Sakit.s, 0);
+  const totalCutiSesiTahun = yearlyData.reduce((acc, m) => acc + m.stats.Cuti.p + m.stats.Cuti.s, 0);
   const totalHadirSesiTahun = yearlyData.reduce((acc, m) => acc + m.totalEfektif, 0);
+
   const totalEfektifKinerja = Math.round((totalHadirSesiTahun / 2) * 10) / 10;
-  const totalNonEfektifKinerja = totalAlpaTahun + totalIzinTahun + totalSakitTahun + totalCutiTahun;
+  const totalAlpaTahun = Math.round((totalAlpaSesiTahun / 2) * 10) / 10;
+  const totalIzinTahun = Math.round((totalIzinSesiTahun / 2) * 10) / 10;
+  const totalSakitTahun = Math.round((totalSakitSesiTahun / 2) * 10) / 10;
+  const totalCutiTahun = Math.round((totalCutiSesiTahun / 2) * 10) / 10;
+  // Dibagi dari total sesi gabungan (bukan menjumlahkan hasil bagi per kategori yang
+  // sudah dibulatkan) supaya tidak ada selisih pembulatan ganda.
+  const totalNonEfektifSesiTahun = totalAlpaSesiTahun + totalIzinSesiTahun + totalSakitSesiTahun + totalCutiSesiTahun;
+  const totalNonEfektifKinerja = Math.round((totalNonEfektifSesiTahun / 2) * 10) / 10;
 
   const getFormattedDate = () => {
     return new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -549,12 +560,12 @@ export default function AdminRekapanTahunan({ employees, settings, user, holiday
               </table>
 
               {/* CATATAN RINGKASAN TAHUN */}
-              <div className="mt-4 mb-6 text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded p-3 print:bg-transparent space-y-1">
+              <div className="mt-4 mb-6 text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded p-3 print:bg-transparent space-y-1.5">
                  <p>
-                    <b>Total Hari Efektif Tahun {year}:</b> {yearCalendarStats.effektif + yearCalendarStats.nonEfektif} hari &minus; {yearCalendarStats.nonEfektif} hari non-efektif = <b>{yearCalendarStats.effektif} hari efektif</b>
+                    <b>Total Hari Efektif Tahun {year}:</b> {yearCalendarStats.effektif + yearCalendarStats.nonEfektif} hari kalender &minus; {yearCalendarStats.nonEfektif} hari non-efektif (Sabtu/Minggu/hari libur) = <b>{yearCalendarStats.effektif} hari efektif (hari kerja).</b>
                  </p>
                  <p>
-                    <b>Rekap {selectedEmployee.nama}:</b> Total Efektif Kinerja = <b>{totalEfektifKinerja}</b> hari &middot; Total Non Efektif Kinerja = <b>{totalNonEfektifKinerja}</b> hari (Alpa: {totalAlpaTahun}, Izin: {totalIzinTahun}, Sakit: {totalSakitTahun}, Cuti: {totalCutiTahun})
+                    <b>Rekap Kinerja:</b> Total Efektif Kinerja = <b>{totalEfektifKinerja} hari</b> (Hadir/Dinas Luar) &middot; Total Non-Efektif Kinerja = <b>{totalNonEfektifKinerja} hari</b> (Alpa: {totalAlpaTahun}, Izin: {totalIzinTahun}, Sakit: {totalSakitTahun}, Cuti: {totalCutiTahun}).
                  </p>
               </div>
 

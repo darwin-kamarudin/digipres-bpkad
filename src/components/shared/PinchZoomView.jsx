@@ -32,7 +32,26 @@ export default function PinchZoomView({ children, contentWidth = 640 }) {
   useEffect(() => {
     measure();
     window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
+
+    // PENTING: data dokumen (mis. daftar pegawai dari Firestore) sering belum
+    // termuat penuh saat komponen ini pertama kali mount, sehingga tinggi asli
+    // konten masih berubah SETELAH pengukuran pertama di atas. Tanpa observer
+    // ini, tinggi kontainer jadi "beku" di ukuran awal yang lebih kecil, dan
+    // konten yang baru dimuat kemudian akan terpotong (overflow-hidden) di
+    // layar meski data sesungguhnya sudah lengkap — inilah yang bikin halaman
+    // dokumen tampak terpotong di aplikasi meski hasil cetaknya lengkap
+    // (cetak mengambil innerHTML langsung, tidak terikat tinggi kontainer ini).
+    const contentEl = containerRef.current?.querySelector('[data-pinch-content]');
+    let ro;
+    if (contentEl && typeof ResizeObserver !== 'undefined') {
+      ro = new ResizeObserver(() => measure());
+      ro.observe(contentEl);
+    }
+
+    return () => {
+      window.removeEventListener('resize', measure);
+      if (ro) ro.disconnect();
+    };
   }, [measure]);
 
   const dist = (touches) => Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);

@@ -1,8 +1,8 @@
 {
-  "name": "aplikasi-absensi-final",
+  "name": "digipres",
   "homepage": "https://darwin-kamarudin.github.io/digipres-bpkad",
   "private": true,
-  "version": "1.0.2",
+  "version": "1.0.4",
   "type": "module",
   "scripts": {
     "dev": "vite --mode mobile",
@@ -24,6 +24,7 @@
     "@capacitor/app": "^8.1.1",
     "@capacitor/core": "^8.4.2",
     "@capacitor/geolocation": "^8.2.0",
+    "@capacitor/splash-screen": "^8.0.2",
     "@capgo/capacitor-printer": "^8.1.1",
     "@tailwindcss/vite": "^4.3.0",
     "@tinymce/tinymce-react": "^6.3.0",

@@ -237,7 +237,7 @@ export default function UserHome({ user, attendance, settings }) {
           terkunci mengikuti lebar frame mobile (max-w-md) yang di-set di App.jsx,
           bukan lebar penuh browser saat diakses dari desktop. */}
       <div className="sticky bottom-0 z-10 safe-bottom">
-        <div className="max-w-md mx-auto flex flex-col items-center pb-4 pt-2 bg-gradient-to-t from-slate-50 via-slate-50/90 to-transparent">
+        <div className="max-w-md mx-auto flex flex-col items-center pb-1 pt-2 bg-gradient-to-t from-slate-50 via-slate-50/90 to-transparent">
           <button
             onClick={() => mobileOnlyBlocked ? setShowMobileOnlyModal(true) : navigate('/absensi-mandiri')}
             className="w-24 h-24 rounded-full border-4 border-red-700 bg-white flex items-center justify-center text-red-700 shadow-xl active:scale-95 transition-transform mb-[-1px] relative z-10"

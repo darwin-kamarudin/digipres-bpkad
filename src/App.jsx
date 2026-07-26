@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { HashRouter, useLocation } from 'react-router-dom';
+import { SplashScreen } from '@capacitor/splash-screen';
 
 // --- CUSTOM HOOK (LOGIC) ---
 import { useAppData } from './hooks/useAppData';
@@ -16,7 +17,7 @@ import { isNativePlatform } from './lib/geolocation';
 import useIsMobileViewport from './hooks/useIsMobileViewport';
 
 const MANAGEMENT_ROLES = ['admin', 'operator', 'pengelola'];
-const LANDSCAPE_PRINT_PATHS = ['/cetak-manual', '/rekapan-tahunan'];
+const LANDSCAPE_PRINT_PATHS = ['/cetak-manual', '/rekapan-tahunan', '/laporan-bulanan/tahunan'];
 
 // === KOMPONEN UTAMA (YANG DIBUNGKUS ROUTER) ===
 function MainContent() {
@@ -31,6 +32,16 @@ function MainContent() {
   const isMobileViewport = useIsMobileViewport();
 
   const location = useLocation();
+
+  // Splash native (splash.png, launchAutoHide:false — lihat capacitor.config.json)
+  // sengaja DITAHAN sampai titik ini, supaya tidak ada jeda WebView kosong antara
+  // splash hilang dan LoadingScreen React tampil. Efek ini jalan SEKALI setelah
+  // frame pertama (LoadingScreen, karena `loading` awal selalu true) sudah
+  // ter-render & ter-paint, sehingga hand-off dari splash ke LoadingScreen mulus
+  // tanpa mengubah animasi/tampilan LoadingScreen itu sendiri. No-op aman di web.
+  useEffect(() => {
+    SplashScreen.hide().catch(() => {});
+  }, []);
 
   const onLogout = () => {
       handleAppLogout();

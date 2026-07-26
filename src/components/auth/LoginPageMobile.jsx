@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Loader2, Quote, Fingerprint, Eye, EyeOff } from 'lucide-react';
 import { DEFAULT_LOGO_URL } from '../../utils/helpers';
 import { isBiometricAvailable, authenticateWithBiometric } from '../../lib/biometric';
+import pkg from '../../../package.json';
 
 // Daftar Kata-Kata Bijak / Filosofi
 const QUOTES = [
@@ -88,7 +89,7 @@ export default function LoginPageMobile({ onLogin, settings, biometricLoginEnabl
         <h1 className="text-2xl font-black tracking-tight">
           <span className="text-white">Digi</span><span className="text-amber-300">Pres</span>
         </h1>
-        <p className="text-xs font-bold text-red-100 uppercase tracking-wide mt-1 text-center px-4">{settings.opdName}</p>
+        <p className="text-2xl font-black text-red-100 uppercase tracking-wide mt-1 text-center px-4 leading-snug">{settings.opdName}</p>
       </div>
 
       {/* LEMBAR BAWAH (FORM / LOADING) */}
@@ -170,8 +171,9 @@ export default function LoginPageMobile({ onLogin, settings, biometricLoginEnabl
 
         {/* FOOTER (Selalu Tampil) */}
         {!isLoading && (
-            <div className="mt-6 text-center text-xs text-slate-400">
-               © {new Date().getFullYear()} {settings.opdShort}
+            <div className="mt-6 text-center text-xs text-slate-400 leading-relaxed">
+               <p>© {new Date().getFullYear()} DigiPres (Digital Presensi) &bull; v{pkg.version}</p>
+               <p className="mt-0.5 font-semibold text-slate-500">Darwin Kamarudin</p>
             </div>
         )}
       </div>

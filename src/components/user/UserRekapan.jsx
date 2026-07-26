@@ -4,6 +4,7 @@ import { Printer } from 'lucide-react';
 import { getTodayString, getWeekNumber, formatDateIndo, isNonEffectiveDate, formatLocalDate, DEFAULT_LOGO_URL } from '../../utils/helpers';
 import { mergeAttendanceWithLocks } from '../../utils/statistics';
 import MobileHeader from './MobileHeader';
+import UserCetakBottomNav from './UserCetakBottomNav';
 import PinchZoomView from '../shared/PinchZoomView';
 import { printDocumentNode } from '../../lib/printDocument';
 
@@ -139,57 +140,58 @@ export default function UserRekapan({ user, attendance, statusLocks = [], settin
       : `Minggu ke-${getWeekNumber(new Date(week))} (${new Date(week).getFullYear()})`;
 
    return (
-      <div className="min-h-full bg-slate-50">
+      <div className="min-h-full bg-slate-50 pb-20 print:pb-0">
          <MobileHeader title="Rekapan Bulanan" onBack={() => navigate('/')} />
 
          <div className="space-y-6 animate-in fade-in duration-300 p-4">
          {/* CONTROLS (Non-Print) */}
-         <div className="bg-white p-4 rounded shadow print:hidden flex flex-col gap-4">
-             <div className="flex flex-wrap gap-4 items-end justify-between">
-                <div className="flex gap-4">
-                   <div>
-                      <label className="block text-xs font-bold mb-1">Tipe Rekapan</label>
-                      <select className="border p-2 rounded w-32 bg-white focus:ring-2 focus:ring-blue-500 outline-none" value={viewMode} onChange={e=>setViewMode(e.target.value)}>
-                         <option value="bulanan">Bulanan</option>
-                         <option value="mingguan">Mingguan</option>
-                      </select>
-                   </div>
-                   <div>
-                      <label className="block text-xs font-bold mb-1">{viewMode === 'bulanan' ? 'Pilih Bulan' : 'Pilih Tanggal (Dalam Minggu)'}</label>
-                      {viewMode === 'bulanan' ? (
-                         <input type="month" value={month} onChange={e=>setMonth(e.target.value)} className="border p-2 rounded bg-white focus:ring-2 focus:ring-blue-500 outline-none"/>
-                      ) : (
-                         <input type="date" value={week} onChange={e=>setWeek(e.target.value)} className="border p-2 rounded bg-white focus:ring-2 focus:ring-blue-500 outline-none"/>
-                      )}
-                   </div>
+         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-3 print:hidden">
+             <div className="grid grid-cols-2 gap-2">
+                <div>
+                   <label className="block text-[11px] font-bold text-slate-500 mb-1">Tipe Rekapan</label>
+                   <select className="w-full p-2.5 border border-slate-200 rounded-xl outline-none text-sm bg-white focus:ring-2 focus:ring-red-600" value={viewMode} onChange={e=>setViewMode(e.target.value)}>
+                      <option value="bulanan">Bulanan</option>
+                      <option value="mingguan">Mingguan</option>
+                   </select>
                 </div>
-                <button onClick={() => printDocumentNode(docRef.current, `Rekapan Absensi - ${user.nama} - ${rangeText}`)} className="bg-slate-800 text-white px-4 py-2 rounded flex items-center hover:bg-black transition-colors shadow-sm active:scale-95">
-                    <Printer size={16} className="mr-2"/> Cetak
-                </button>
+                <div>
+                   <label className="block text-[11px] font-bold text-slate-500 mb-1">{viewMode === 'bulanan' ? 'Pilih Bulan' : 'Pilih Tgl (Minggu)'}</label>
+                   {viewMode === 'bulanan' ? (
+                      <input type="month" value={month} onChange={e=>setMonth(e.target.value)} className="w-full p-2.5 border border-slate-200 rounded-xl outline-none text-sm bg-white focus:ring-2 focus:ring-red-600"/>
+                   ) : (
+                      <input type="date" value={week} onChange={e=>setWeek(e.target.value)} className="w-full p-2.5 border border-slate-200 rounded-xl outline-none text-sm bg-white focus:ring-2 focus:ring-red-600"/>
+                   )}
+                </div>
              </div>
 
              {/* OPSI TANDA TANGAN */}
-             <div className="flex gap-6 border-t pt-3">
-                 <span className="text-xs font-bold text-slate-500 flex items-center">Opsi Tanda Tangan:</span>
-                 <label className="flex items-center gap-2 cursor-pointer text-sm select-none">
-                    <input 
-                        type="checkbox" 
-                        checked={showSecretary} 
-                        onChange={(e) => setShowSecretary(e.target.checked)}
-                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                    />
-                    TTD Sekretaris
-                 </label>
-                 <label className="flex items-center gap-2 cursor-pointer text-sm select-none">
-                    <input 
-                        type="checkbox" 
-                        checked={showLeader} 
-                        onChange={(e) => setShowLeader(e.target.checked)}
-                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                    />
-                    TTD Pimpinan
-                 </label>
+             <div className="space-y-2 pt-1 border-t border-slate-100">
+                 <span className="block text-[11px] font-bold text-slate-500">Opsi Tanda Tangan</span>
+                 <div className="grid grid-cols-2 gap-2">
+                    <label className="flex items-center gap-2 cursor-pointer text-sm font-bold text-slate-700 select-none">
+                       <input
+                           type="checkbox"
+                           checked={showSecretary}
+                           onChange={(e) => setShowSecretary(e.target.checked)}
+                           className="w-5 h-5 text-red-700 rounded border-gray-300 focus:ring-red-600"
+                       />
+                       TTD Sekretaris
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer text-sm font-bold text-slate-700 select-none">
+                       <input
+                           type="checkbox"
+                           checked={showLeader}
+                           onChange={(e) => setShowLeader(e.target.checked)}
+                           className="w-5 h-5 text-red-700 rounded border-gray-300 focus:ring-red-600"
+                       />
+                       TTD Pimpinan
+                    </label>
+                 </div>
              </div>
+
+             <button onClick={() => printDocumentNode(docRef.current, `Rekapan Absensi - ${user.nama} - ${rangeText}`)} className="w-full flex items-center justify-center gap-2 bg-red-700 active:bg-red-800 text-white p-3 rounded-xl font-bold">
+                 <Printer size={18}/> Cetak Rekapan
+             </button>
          </div>
 
          {/* REPORT AREA */}
@@ -363,6 +365,8 @@ export default function UserRekapan({ user, attendance, statusLocks = [], settin
          </div>
          </PinchZoomView>
          </div>
+
+         <UserCetakBottomNav />
       </div>
    );
 }
