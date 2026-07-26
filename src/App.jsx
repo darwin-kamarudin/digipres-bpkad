@@ -123,7 +123,7 @@ function MainContent() {
             <PrintStyles isLandscape={isLandscape} />
 
             {!isManagement ? (
-              <div className="max-w-md w-full mx-auto min-h-full bg-slate-50 shadow-2xl print:shadow-none print:max-w-none">
+              <div className="user-frame max-w-md w-full mx-auto min-h-full bg-slate-50 shadow-2xl print:shadow-none print:max-w-none">
                 <AppRoutes
                   isManagement={isManagement}
                   mobileNativeAdmin={false}

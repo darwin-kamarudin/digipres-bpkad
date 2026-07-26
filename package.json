@@ -2,7 +2,7 @@
   "name": "digipres",
   "homepage": "https://darwin-kamarudin.github.io/digipres-bpkad",
   "private": true,
-  "version": "1.0.4",
+  "version": "1.0.5",
   "type": "module",
   "scripts": {
     "dev": "vite --mode mobile",

@@ -29,9 +29,13 @@ export default function UserAbsensi({ user, attendance, holidays, settings }) {
   const [loadingTime, setLoadingTime] = useState(true);
   const [serverTime, setServerTime] = useState(null);
 
-  // Validasi Geo Lokasi (Geofencing)
-  const [geoState, setGeoState] = useState({ status: 'idle', location: null, message: '' });
-  const [geoRetryTick, setGeoRetryTick] = useState(0);
+  // Validasi Geo Lokasi (Geofencing) — kini divalidasi SAAT PENGIRIMAN, bukan lagi
+  // sebagai gerbang sebelum kamera dibuka. geoState hanya untuk menampilkan hasil
+  // validasi (mis. di luar radius / GPS mati) setelah user menekan "Kirim".
+  const [geoState, setGeoState] = useState({ status: 'idle', message: '' });
+  const [submitting, setSubmitting] = useState(false);
+  // Posisi GPS hasil warm-up di latar belakang (memicu izin lokasi lebih awal).
+  const geoWarmRef = useRef(null);
 
   // Fitur Kamera (native camera-preview via src/lib/camera.js, fallback getUserMedia di web)
   const videoRef = useRef(null);
@@ -116,77 +120,32 @@ export default function UserAbsensi({ user, attendance, holidays, settings }) {
      setDone(!!exists);
   }, [form.date, form.session, attendance, user.id]);
 
-  // 4. Validasi Geo Lokasi (Geofencing) — dijalankan SEBELUM kamera dibuka
+  // 4. Buka kamera SEGERA saat sesi absensi tersedia (tanpa menunggu GPS).
+  //    GPS diprefetch di latar belakang (memicu izin lokasi lebih awal & meng-cache
+  //    posisi) dan baru DIVALIDASI saat user menekan "Kirim" (lihat submit()).
   useEffect(() => {
+    const active = !done && canAbsen && !blockMessage;
+
+    if (!active) {
+      endCamera();
+      setGeoState({ status: 'idle', message: '' });
+      return;
+    }
+
     let cancelled = false;
+    beginCamera();
 
-    const runGeoCheck = async () => {
-      if (done || !canAbsen || blockMessage) {
-        endCamera();
-        setGeoState({ status: 'idle', location: null, message: '' });
-        return;
-      }
+    // Warm-up GPS di latar belakang bila geofence aktif.
+    const geoLocations = settings?.geoLocations || [];
+    const geoActive = settings?.geoFenceEnabled && geoLocations.length > 0;
+    if (geoActive) {
+      getCurrentPosition()
+        .then((pos) => { if (!cancelled) geoWarmRef.current = pos; })
+        .catch(() => { /* diabaikan; validasi sebenarnya dilakukan saat submit */ });
+    }
 
-      const geoLocations = settings?.geoLocations || [];
-      const geoActive = settings?.geoFenceEnabled && geoLocations.length > 0;
-
-      if (!geoActive) {
-        setGeoState({ status: 'ok', location: null, message: '' });
-        beginCamera();
-        return;
-      }
-
-      setGeoState({ status: 'checking', location: null, message: '' });
-      try {
-        const pos = await getCurrentPosition();
-        if (cancelled) return;
-
-        if (pos.mockSuspected) {
-          endCamera();
-          setGeoState({
-            status: 'mock',
-            location: pos,
-            message: 'Terdeteksi indikasi lokasi palsu (fake/mock GPS). Nonaktifkan aplikasi fake GPS terlebih dahulu untuk melakukan absensi.',
-          });
-          return;
-        }
-
-        const nearest = findNearestGeoFence(pos.lat, pos.lng, geoLocations);
-        const withinFence = nearest && nearest.distance <= nearest.radius;
-
-        if (!withinFence) {
-          endCamera();
-          setGeoState({
-            status: 'blocked',
-            location: pos,
-            message: nearest
-              ? `Anda berada di luar radius lokasi absensi. Jarak ke titik terdekat "${nearest.name}" sekitar ${Math.round(nearest.distance)} meter (radius diizinkan ${nearest.radius} meter).`
-              : 'Belum ada titik lokasi absensi yang dikonfigurasi oleh admin.',
-          });
-          return;
-        }
-
-        setGeoState({ status: 'ok', location: pos, message: '' });
-        beginCamera();
-      } catch (err) {
-        if (cancelled) return;
-        endCamera();
-        console.error('[UserAbsensi] Gagal ambil lokasi GPS:', err);
-        const isPermission = err?.code === 'PERMISSION_DENIED' || err?.code === 1;
-        const isServicesOff = err?.code === 'LOCATION_SERVICES_DISABLED';
-        let message = 'Gagal mendapatkan lokasi GPS. Pastikan GPS aktif dan sinyal memadai.';
-        if (isServicesOff) {
-          message = 'Location Services (GPS) di perangkat sedang MATI. Aktifkan lewat Pengaturan > Lokasi, lalu coba lagi.';
-        } else if (isPermission) {
-          message = 'Izin akses lokasi ditolak. Aktifkan izin GPS/lokasi untuk melakukan absensi.';
-        }
-        setGeoState({ status: 'error', location: null, message });
-      }
-    };
-
-    runGeoCheck();
-    return () => { cancelled = true; };
-  }, [canAbsen, done, blockMessage, settings, geoRetryTick]);
+    return () => { cancelled = true; endCamera(); };
+  }, [canAbsen, done, blockMessage, settings]);
 
   // Bersihkan kamera saat unmount
   useEffect(() => {
@@ -215,8 +174,63 @@ export default function UserAbsensi({ user, attendance, holidays, settings }) {
   const submit = async (e) => {
      e.preventDefault();
      if (!photo) return alert("Silakan ambil foto biometrik wajah Anda terlebih dahulu!");
-     if (!confirm('Kirim data absensi sekarang?')) return;
+     if (submitting) return;
 
+     setSubmitting(true);
+     setGeoState({ status: 'checking', message: '' });
+
+     // --- VALIDASI GPS SAAT PENGIRIMAN ---
+     // Jika di luar radius / GPS mati / lokasi palsu -> absensi DIBATALKAN,
+     // foto tetap dipertahankan agar user bisa pindah lokasi & kirim ulang.
+     let location = null;
+     try {
+        const geoLocations = settings?.geoLocations || [];
+        const geoActive = settings?.geoFenceEnabled && geoLocations.length > 0;
+
+        if (geoActive) {
+           const pos = await getCurrentPosition();
+
+           if (pos.mockSuspected) {
+              setGeoState({
+                 status: 'mock',
+                 message: 'Absensi dibatalkan. Terdeteksi indikasi lokasi palsu (fake/mock GPS). Nonaktifkan aplikasi fake GPS terlebih dahulu, lalu kirim ulang.',
+              });
+              setSubmitting(false);
+              return;
+           }
+
+           const nearest = findNearestGeoFence(pos.lat, pos.lng, geoLocations);
+           const withinFence = nearest && nearest.distance <= nearest.radius;
+
+           if (!withinFence) {
+              setGeoState({
+                 status: 'blocked',
+                 message: nearest
+                    ? `Absensi dibatalkan. Anda berada di luar radius lokasi. Jarak ke titik terdekat "${nearest.name}" sekitar ${Math.round(nearest.distance)} meter (radius diizinkan ${nearest.radius} meter). Mendekatlah ke lokasi lalu kirim ulang.`
+                    : 'Absensi dibatalkan. Belum ada titik lokasi absensi yang dikonfigurasi oleh admin.',
+              });
+              setSubmitting(false);
+              return;
+           }
+
+           location = pos;
+        }
+     } catch (err) {
+        console.error('[UserAbsensi] Gagal validasi GPS saat submit:', err);
+        const isServicesOff = err?.code === 'LOCATION_SERVICES_DISABLED';
+        const isPermission = err?.code === 'PERMISSION_DENIED' || err?.code === 1;
+        let message = 'Absensi dibatalkan. Gagal mendapatkan lokasi GPS. Aktifkan GPS & pastikan sinyal memadai, lalu kirim ulang.';
+        if (isServicesOff) {
+           message = 'Absensi dibatalkan. GPS/Location Services sedang MATI. Aktifkan GPS lewat Pengaturan > Lokasi, lalu kirim ulang.';
+        } else if (isPermission) {
+           message = 'Absensi dibatalkan. Izin akses lokasi ditolak. Aktifkan izin GPS/lokasi, lalu kirim ulang.';
+        }
+        setGeoState({ status: 'error', message });
+        setSubmitting(false);
+        return;
+     }
+
+     // --- LOLOS VALIDASI -> KIRIM OTOMATIS ---
      try {
         // ID deterministik: 1 sesi = 1 dokumen. Absensi mandiri MENIMPA kunci status
         // admin (jika ada) -> otomatis berubah jadi Hadir (buka kunci).
@@ -235,13 +249,16 @@ export default function UserAbsensi({ user, attendance, holidays, settings }) {
             serverTimestamp: serverTimestamp(),
             device: getDeviceType(),
             connectionStatus: navigator.onLine ? 'online' : 'offline',
-            location: geoState.location ? { lat: geoState.location.lat, lng: geoState.location.lng, accuracy: geoState.location.accuracy } : null,
+            location: location ? { lat: location.lat, lng: location.lng, accuracy: location.accuracy } : null,
         });
+        setGeoState({ status: 'idle', message: '' });
         alert('Absensi berhasil dikirim.');
         setPhoto(null);
      } catch (error) {
         console.error(error);
         alert('Gagal mengirim absensi. Periksa koneksi internet.');
+     } finally {
+        setSubmitting(false);
      }
   };
 
@@ -288,7 +305,7 @@ export default function UserAbsensi({ user, attendance, holidays, settings }) {
       </div>
   );
 
-  const showCamera = !done && canAbsen && !blockMessage && geoState.status === 'ok';
+  const showCamera = !done && canAbsen && !blockMessage;
   const showPanelBack = !showCamera;
 
   return (
@@ -376,42 +393,33 @@ export default function UserAbsensi({ user, attendance, holidays, settings }) {
             </div>
           )}
 
-          {canAbsen && !done && !blockMessage && geoState.status === 'checking' && (
+          {showCamera && geoState.status === 'checking' && (
             <div className="mb-4 bg-blue-50 text-blue-700 p-4 rounded-xl text-center border border-blue-200">
               <RefreshCw size={28} className="mx-auto mb-2 animate-spin"/>
-              <p className="font-bold text-sm">Memeriksa lokasi GPS Anda...</p>
+              <p className="font-bold text-sm">Memvalidasi lokasi GPS & mengirim absensi...</p>
             </div>
           )}
 
-          {canAbsen && !done && !blockMessage && geoState.status === 'blocked' && (
+          {showCamera && geoState.status === 'blocked' && (
             <div className="mb-4 bg-orange-100 text-orange-800 p-4 rounded-xl text-center border border-orange-200">
               <MapPin size={32} className="mx-auto mb-2 text-orange-600"/>
               <span className="font-bold block text-lg mb-1">Di Luar Radius Lokasi</span>
               <p className="text-sm">{geoState.message}</p>
-              <button type="button" onClick={() => setGeoRetryTick(t => t + 1)} className="mt-3 bg-orange-600 active:bg-orange-700 text-white font-bold text-sm px-4 py-2 rounded-lg">
-                Coba Lagi
-              </button>
             </div>
           )}
 
-          {canAbsen && !done && !blockMessage && geoState.status === 'mock' && (
+          {showCamera && geoState.status === 'mock' && (
             <div className="mb-4 bg-red-100 text-red-800 p-4 rounded-xl text-center border border-red-300">
               <ShieldAlert size={32} className="mx-auto mb-2 text-red-600"/>
               <span className="font-bold block text-lg mb-1">Lokasi Palsu Terdeteksi</span>
               <p className="text-sm">{geoState.message}</p>
-              <button type="button" onClick={() => setGeoRetryTick(t => t + 1)} className="mt-3 bg-red-600 active:bg-red-700 text-white font-bold text-sm px-4 py-2 rounded-lg">
-                Coba Lagi
-              </button>
             </div>
           )}
 
-          {canAbsen && !done && !blockMessage && geoState.status === 'error' && (
+          {showCamera && geoState.status === 'error' && (
             <div className="mb-4 bg-yellow-100 text-yellow-800 p-4 rounded-xl text-center border border-yellow-200">
               <AlertTriangle size={32} className="mx-auto mb-2 text-yellow-600"/>
               <p className="font-bold text-sm">{geoState.message}</p>
-              <button type="button" onClick={() => setGeoRetryTick(t => t + 1)} className="mt-3 bg-yellow-600 active:bg-yellow-700 text-white font-bold text-sm px-4 py-2 rounded-lg">
-                Coba Lagi
-              </button>
             </div>
           )}
 
@@ -448,10 +456,10 @@ export default function UserAbsensi({ user, attendance, holidays, settings }) {
                 )}
 
                 {showCamera && (
-                    <button disabled={!photo} className={`w-full text-white font-bold py-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2
-                        ${photo ? 'bg-blue-600 active:bg-blue-700 active:scale-95' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}>
-                        <Camera size={20}/>
-                        {photo ? 'KIRIM ABSENSI SEKARANG' : 'AMBIL FOTO DAHULU'}
+                    <button disabled={!photo || submitting} className={`w-full text-white font-bold py-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2
+                        ${photo && !submitting ? 'bg-blue-600 active:bg-blue-700 active:scale-95' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}>
+                        {submitting ? <RefreshCw size={20} className="animate-spin"/> : <Camera size={20}/>}
+                        {submitting ? 'MEMVALIDASI GPS...' : (photo ? 'KIRIM ABSENSI SEKARANG' : 'AMBIL FOTO DAHULU')}
                     </button>
                 )}
               </form>
