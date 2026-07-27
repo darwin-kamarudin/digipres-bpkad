@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlertTriangle, Lock, CheckCircle, RefreshCw, Camera, ChevronLeft, Home, MapPin, ShieldAlert, Smartphone } from 'lucide-react';
+import { AlertTriangle, Lock, CheckCircle, RefreshCw, Camera, ChevronLeft, Home, MapPin, ShieldAlert, Smartphone, SwitchCamera } from 'lucide-react';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { getCollectionPath } from '../../lib/firebase';
 import { getTodayString, formatDateIndo, fetchServerTime, adjustTimezone, getDeviceType } from '../../utils/helpers';
 import { getCurrentPosition, findNearestGeoFence, isNativePlatform } from '../../lib/geolocation';
-import { startCamera, capturePhoto, stopCamera } from '../../lib/camera';
+import { startCamera, capturePhoto, stopCamera, flipCamera } from '../../lib/camera';
 
 // Menentukan sesi absensi (Pagi/Siang/Sore) berdasarkan jam berjalan & jendela waktu di settings
 const determineSession = (time, settings) => {
@@ -41,12 +41,26 @@ export default function UserAbsensi({ user, attendance, holidays, settings }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const [photo, setPhoto] = useState(null);
+  const [facing, setFacing] = useState('front'); // 'front' (depan) | 'back' (belakang)
+  const facingRef = useRef('front');
   const native = isNativePlatform();
 
-  const beginCamera = () => {
-    startCamera({ videoEl: videoRef.current }).catch((err) => {
+  const beginCamera = (f = facingRef.current) => {
+    startCamera({ videoEl: videoRef.current, facing: f }).catch((err) => {
       console.error('Gagal mengakses kamera: ', err);
     });
+  };
+
+  // Ganti kamera depan <-> belakang (hanya saat preview aktif & belum ambil foto).
+  const toggleCamera = async () => {
+    const next = facing === 'front' ? 'back' : 'front';
+    setFacing(next);
+    facingRef.current = next;
+    try {
+      await flipCamera({ videoEl: videoRef.current, facing: next });
+    } catch (err) {
+      console.error('Gagal mengganti kamera: ', err);
+    }
   };
 
   const endCamera = () => {
@@ -309,21 +323,22 @@ export default function UserAbsensi({ user, attendance, holidays, settings }) {
   const showPanelBack = !showCamera;
 
   return (
-    <div className="camera-screen flex flex-col min-h-full bg-slate-900 overflow-hidden relative pb-10 safe-top">
+    <div className="camera-screen flex flex-col flex-1 min-h-full bg-slate-900 overflow-hidden relative safe-top">
 
       {/* BAGIAN KAMERA (Hanya Tampil Jika Bisa Absen & Lolos Validasi Lokasi) */}
       {showCamera && (
-        <div className="camera-stage relative flex-1 min-h-[50vh] bg-slate-900 flex flex-col items-center justify-center overflow-hidden">
+        <div className="camera-stage relative flex-1 min-h-0 bg-slate-900 flex flex-col items-center justify-center overflow-hidden">
+            {/* Kamera depan dicerminkan (efek selfie); kamera belakang tampil apa adanya. */}
             {!photo ? (
                 // Native: preview kamera dirender di lapisan native di belakang webview,
                 // jadi area ini dibiarkan transparan. Web: pakai <video> getUserMedia.
                 native ? (
                   <div className="absolute inset-0" />
                 ) : (
-                  <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover absolute inset-0 transform scale-x-[-1]"></video>
+                  <video ref={videoRef} autoPlay playsInline muted className={`w-full h-full object-cover absolute inset-0 transform ${facing === 'front' ? 'scale-x-[-1]' : ''}`}></video>
                 )
             ) : (
-                <img src={photo} alt="Biometrik" className="w-full h-full object-cover absolute inset-0 transform scale-x-[-1]" />
+                <img src={photo} alt="Biometrik" className={`w-full h-full object-cover absolute inset-0 transform ${facing === 'front' ? 'scale-x-[-1]' : ''}`} />
             )}
             <canvas ref={canvasRef} width="300" height="400" className="hidden"></canvas>
 
@@ -338,32 +353,37 @@ export default function UserAbsensi({ user, attendance, holidays, settings }) {
                 <ChevronLeft size={26} />
             </button>
 
+            {/* Tombol Ganti Kamera (depan/belakang) — hanya sebelum foto diambil */}
+            {!photo && (
+                <button
+                    type="button"
+                    onClick={toggleCamera}
+                    aria-label="Ganti kamera depan/belakang"
+                    className="absolute right-4 z-20 flex items-center gap-1.5 px-3 h-11 rounded-full bg-black/40 backdrop-blur-sm text-white text-xs font-bold active:bg-black/60 transition-colors"
+                    style={{ top: 'max(1rem, calc(env(safe-area-inset-top, 0px) + 0.75rem))' }}
+                >
+                    <SwitchCamera size={20} />
+                    {facing === 'front' ? 'Depan' : 'Belakang'}
+                </button>
+            )}
+
             {/* Guide Face */}
             {!photo && (
                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
                     <div className="w-56 h-72 border-2 border-dashed border-white/60 rounded-[40%] animate-pulse"></div>
-                    <p className="absolute bottom-24 text-white text-xs font-bold drop-shadow-md bg-black/50 px-3 py-1 rounded-full">Posisikan wajah Anda di dalam area</p>
+                    <p className="absolute bottom-6 text-white text-xs font-bold drop-shadow-md bg-black/50 px-3 py-1 rounded-full">Posisikan wajah Anda di dalam area</p>
                 </div>
             )}
-
-            {/* Tombol Shutter */}
-            <div className="absolute bottom-6 left-0 right-0 flex justify-center z-10">
-                {!photo ? (
-                    <button type="button" onClick={takePhoto} className="w-16 h-16 bg-white/20 rounded-full border-4 border-white flex items-center justify-center shadow-lg backdrop-blur-sm active:scale-95 transition-transform">
-                        <div className="w-12 h-12 bg-white rounded-full"></div>
-                    </button>
-                ) : (
-                    <button type="button" onClick={retakePhoto} className="bg-white/90 backdrop-blur text-slate-800 px-4 py-2 rounded-full font-bold shadow-lg flex items-center gap-2 border border-slate-200 active:scale-95 transition-transform">
-                        <RefreshCw size={16} /> Foto Ulang
-                    </button>
-                )}
-            </div>
+            {/* Tombol shutter/kontrol dipindahkan ke panel bawah (card absensi). */}
         </div>
       )}
 
       {/* PANEL FORM & NOTIFIKASI */}
-      <div className={`bg-white ${showCamera ? 'rounded-t-3xl -mt-6 relative z-20 shadow-[0_-10px_20px_rgba(0,0,0,0.15)] pt-6' : 'h-full flex-1 pt-10'} p-6`}>
-          <div className="text-center mb-6 relative">
+      <div
+        className={`bg-white px-6 ${showCamera ? 'shrink-0 rounded-t-3xl -mt-6 relative z-20 shadow-[0_-10px_20px_rgba(0,0,0,0.15)] pt-5' : 'h-full flex-1 pt-10'}`}
+        style={showCamera ? { paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.75rem)' } : { paddingBottom: '1.5rem' }}
+      >
+          <div className={`text-center relative ${showCamera ? 'mb-4' : 'mb-6'}`}>
               {showPanelBack && (
                 <button
                     type="button"
@@ -455,12 +475,32 @@ export default function UserAbsensi({ user, attendance, holidays, settings }) {
                     </>
                 )}
 
-                {showCamera && (
-                    <button disabled={!photo || submitting} className={`w-full text-white font-bold py-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2
-                        ${photo && !submitting ? 'bg-blue-600 active:bg-blue-700 active:scale-95' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}>
-                        {submitting ? <RefreshCw size={20} className="animate-spin"/> : <Camera size={20}/>}
-                        {submitting ? 'MEMVALIDASI GPS...' : (photo ? 'KIRIM ABSENSI SEKARANG' : 'AMBIL FOTO DAHULU')}
+                {/* Belum ada foto -> tombol AMBIL FOTO (dipindahkan ke baris bawah). */}
+                {showCamera && !photo && (
+                    <button
+                        type="button"
+                        onClick={takePhoto}
+                        className="w-full text-white font-bold py-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 bg-blue-600 active:bg-blue-700 active:scale-95">
+                        <Camera size={20}/> AMBIL FOTO
                     </button>
+                )}
+
+                {/* Sudah ada foto -> Foto Ulang + Kirim (validasi GPS saat submit). */}
+                {showCamera && photo && (
+                    <div className="space-y-2">
+                        <button disabled={submitting} className={`w-full text-white font-bold py-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2
+                            ${!submitting ? 'bg-blue-600 active:bg-blue-700 active:scale-95' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}>
+                            {submitting ? <RefreshCw size={20} className="animate-spin"/> : <Camera size={20}/>}
+                            {submitting ? 'MEMVALIDASI GPS...' : 'KIRIM ABSENSI SEKARANG'}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={retakePhoto}
+                            disabled={submitting}
+                            className="w-full flex items-center justify-center gap-2 bg-slate-100 active:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl transition-colors disabled:opacity-50">
+                            <RefreshCw size={16} /> Foto Ulang
+                        </button>
+                    </div>
                 )}
               </form>
           )}

@@ -48,13 +48,14 @@ const normalizeToPortrait = (dataUrl) => new Promise((resolve) => {
 
 /**
  * Mulai kamera. Untuk web, isi videoEl.srcObject dengan stream.
+ * @param {{ videoEl?: HTMLVideoElement, facing?: 'front' | 'back' }} opts
  * @returns {Promise<{ mode: 'native' | 'web' }>}
  */
-export const startCamera = async ({ videoEl } = {}) => {
+export const startCamera = async ({ videoEl, facing = 'front' } = {}) => {
   if (isNativePlatform()) {
     // Preview native fullscreen di belakang webview.
     await CameraPreview.start({
-      position: 'front',
+      position: facing === 'back' ? 'rear' : 'front',
       toBack: true,
       disableAudio: true,
       x: 0,
@@ -68,10 +69,23 @@ export const startCamera = async ({ videoEl } = {}) => {
     return { mode: 'native' };
   }
 
-  const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+  const stream = await navigator.mediaDevices.getUserMedia({
+    video: { facingMode: facing === 'back' ? 'environment' : 'user' },
+  });
   webStream = stream;
   if (videoEl) videoEl.srcObject = stream;
   return { mode: 'web' };
+};
+
+/**
+ * Ganti kamera depan <-> belakang. Aman dipanggil saat preview sedang aktif:
+ * hentikan dulu preview lama lalu mulai lagi dengan arah baru (menghindari race
+ * antara stop & start pada plugin native).
+ * @param {{ videoEl?: HTMLVideoElement, facing?: 'front' | 'back' }} opts
+ */
+export const flipCamera = async ({ videoEl, facing = 'front' } = {}) => {
+  await stopCamera({ videoEl });
+  await startCamera({ videoEl, facing });
 };
 
 /**
