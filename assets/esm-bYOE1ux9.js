@@ -1,0 +1,2 @@
+const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/web-BY7fi-yJ.js","assets/dist-ADVZmEje.js"])))=>i.map(i=>d[i]);
+import{t as e}from"./preload-helper-Czpn1I53.js";import{i as t}from"./dist-ADVZmEje.js";var n=t(`Printer`,{web:()=>e(()=>import(`./web-BY7fi-yJ.js`).then(e=>new e.PrinterWeb),__vite__mapDeps([0,1]))});export{n as Printer};
