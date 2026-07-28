@@ -119,7 +119,7 @@ function MainContent() {
             dipusatkan dengan latar netral di sisi kiri/kanan) — baik diakses lewat
             aplikasi native maupun browser desktop sekalipun. Panel admin (di bawah)
             tidak terpengaruh, tetap memakai layout responsif penuh seperti biasa. */}
-        <div className={`app-content flex-1 overflow-y-auto ${!isManagement ? 'p-0 bg-slate-300' : 'p-6 md:p-8 bg-slate-100'} print:p-0 print:overflow-visible`}>
+        <div className={`app-content flex-1 overflow-y-auto ${!isManagement ? 'p-0 bg-slate-300' : 'p-6 md:p-8 bg-slate-100'} print:p-0 print:overflow-visible print:bg-white`}>
             <PrintStyles isLandscape={isLandscape} />
 
             {!isManagement ? (

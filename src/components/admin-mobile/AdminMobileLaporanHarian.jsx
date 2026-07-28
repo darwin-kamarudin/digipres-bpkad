@@ -2,7 +2,9 @@ import React, { useState, useRef } from 'react';
 import { Printer, ChevronDown } from 'lucide-react';
 import { getTodayString, formatDateIndo } from '../../utils/helpers';
 import { getDailyStats } from '../../utils/statistics';
+import useLampiranFotoHarian from '../../hooks/useLampiranFotoHarian';
 import LaporanHarianDocument from '../admin/LaporanHarianDocument';
+import LampiranOptionsPanel from '../admin/LampiranOptionsPanel';
 import PinchZoomView from '../shared/PinchZoomView';
 import { printDocumentNode } from '../../lib/printDocument';
 
@@ -10,16 +12,23 @@ import { printDocumentNode } from '../../lib/printDocument';
 // sesi, opsi cetak) dirombak jadi kartu bergaya aplikasi native; badan
 // dokumen laporan (format resmi utk dicetak) TETAP dipakai dari komponen
 // bersama LaporanHarianDocument agar hasil cetak identik dengan versi web.
+// KHUSUS versi mobile: "Format Default" (v1) dijadikan model cetak UTAMA
+// (default saat halaman dibuka), berbeda dengan versi web yang masih
+// default ke "Format BKPSDMA" (v2).
 export default function AdminMobileLaporanHarian({ employees, attendance, statusLocks = [], settings, holidays }) {
   const [date, setDate] = useState(getTodayString());
   const [session, setSession] = useState(() => {
     const h = new Date().getHours();
     return h >= 12 ? 'Sore' : 'Pagi';
   });
-  const [printTemplate, setPrintTemplate] = useState('v2');
+  const [printTemplate, setPrintTemplate] = useState('v1');
   const [showSignature, setShowSignature] = useState(true);
+  const [showLampiranDetail, setShowLampiranDetail] = useState(false);
+  const [showLampiranFoto, setShowLampiranFoto] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
   const docRef = useRef(null);
+  const fotoInputRef = useRef(null);
+  const { lampiranFotos, handleFotoChange, clearFotos } = useLampiranFotoHarian(date, session);
 
   const selectedDate = new Date(date);
   const isWeekend = selectedDate.getDay() === 0 || selectedDate.getDay() === 6;
@@ -34,16 +43,6 @@ export default function AdminMobileLaporanHarian({ employees, attendance, status
   const cutiList = grouped.Cuti.sort((a, b) => a.nama.localeCompare(b.nama));
   const dlList = grouped['Dinas Luar'].sort((a, b) => a.nama.localeCompare(b.nama));
   const alpaList = grouped.Alpa.sort((a, b) => a.nama.localeCompare(b.nama));
-
-  const listTidakHadir = [
-    ...grouped.Alpa.map(e => ({ ...e, status: 'Alpa (Tanpa Ket.)' })),
-    ...grouped['Dinas Luar'].map(e => ({ ...e, status: 'Dinas Luar' })),
-    ...grouped.Izin.map(e => ({ ...e, status: 'Izin' })),
-    ...grouped.Sakit.map(e => ({ ...e, status: 'Sakit' })),
-    ...grouped.Cuti.map(e => ({ ...e, status: 'Cuti' })),
-  ];
-  const statusPriority = { 'Alpa (Tanpa Ket.)': 1, 'Dinas Luar': 2, 'Izin': 3, 'Sakit': 4, 'Cuti': 5 };
-  listTidakHadir.sort((a, b) => (statusPriority[a.status] || 99) - (statusPriority[b.status] || 99));
 
   return (
     <div className="p-4 pb-24 space-y-4 font-sans print:p-0 print:pb-0">
@@ -79,8 +78,8 @@ export default function AdminMobileLaporanHarian({ employees, attendance, status
               onChange={(e) => setPrintTemplate(e.target.value)}
               className="w-full p-2.5 border border-amber-300 bg-amber-50 rounded-xl outline-none text-sm font-bold"
             >
-              <option value="v2">Format BKPSDMA</option>
               <option value="v1">Format Default</option>
+              <option value="v2">Format BKPSDMA</option>
             </select>
             <label className="flex items-center gap-2 text-sm font-bold text-slate-700 select-none">
               <input
@@ -91,6 +90,21 @@ export default function AdminMobileLaporanHarian({ employees, attendance, status
               />
               TTD Pimpinan
             </label>
+
+            {printTemplate === 'v1' && (
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <LampiranOptionsPanel
+                  showLampiranDetail={showLampiranDetail}
+                  onToggleLampiranDetail={setShowLampiranDetail}
+                  showLampiranFoto={showLampiranFoto}
+                  onToggleLampiranFoto={setShowLampiranFoto}
+                  lampiranFotos={lampiranFotos}
+                  onPickFoto={handleFotoChange}
+                  onClearFoto={clearFotos}
+                  fotoInputRef={fotoInputRef}
+                />
+              </div>
+            )}
           </div>
         )}
 
@@ -121,7 +135,9 @@ export default function AdminMobileLaporanHarian({ employees, attendance, status
             cutiList={cutiList}
             dlList={dlList}
             alpaList={alpaList}
-            listTidakHadir={listTidakHadir}
+            showLampiranDetail={printTemplate === 'v1' && showLampiranDetail}
+            showLampiranFoto={printTemplate === 'v1' && showLampiranFoto}
+            lampiranFotos={lampiranFotos}
           />
         </div>
       </PinchZoomView>

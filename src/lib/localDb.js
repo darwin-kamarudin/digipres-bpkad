@@ -2,10 +2,11 @@
 // dan foto profil (khusus disimpan di perangkat, TIDAK dikirim ke Firebase).
 
 const DB_NAME = 'absensi_app_db';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const STORE_SESSION = 'session';
 const STORE_PROFILE_PHOTOS = 'profilePhotos';
 const STORE_LOCATION_PING = 'lastLocationPing';
+const STORE_LAMPIRAN_FOTO_HARIAN = 'lampiranFotoHarian';
 const SESSION_KEY = 'current';
 
 let dbPromise = null;
@@ -23,6 +24,7 @@ const openDb = () => {
       if (!db.objectStoreNames.contains(STORE_SESSION)) db.createObjectStore(STORE_SESSION);
       if (!db.objectStoreNames.contains(STORE_PROFILE_PHOTOS)) db.createObjectStore(STORE_PROFILE_PHOTOS);
       if (!db.objectStoreNames.contains(STORE_LOCATION_PING)) db.createObjectStore(STORE_LOCATION_PING);
+      if (!db.objectStoreNames.contains(STORE_LAMPIRAN_FOTO_HARIAN)) db.createObjectStore(STORE_LAMPIRAN_FOTO_HARIAN);
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
@@ -85,3 +87,15 @@ export const loadLastLocationPing = (userId) => idbGet(STORE_LOCATION_PING, user
 export const saveProfilePhoto = (userId, blob) => idbSet(STORE_PROFILE_PHOTOS, userId, blob);
 export const loadProfilePhoto = (userId) => idbGet(STORE_PROFILE_PHOTOS, userId);
 export const clearProfilePhoto = (userId) => idbDelete(STORE_PROFILE_PHOTOS, userId);
+
+// --- Lampiran Foto Laporan Harian (per tanggal+sesi, disimpan sebagai array
+// data URL base64 di PERANGKAT saja) — supaya foto dokumentasi apel yang
+// dipilih admin saat mau cetak TIDAK perlu diunggah/disimpan ke Firebase,
+// menghemat kuota database, tapi tetap tersedia lagi kalau laporan tanggal
+// yang sama dibuka ulang (sampai dihapus manual lewat clearLampiranFotoHarian).
+export const saveLampiranFotoHarian = (key, fotos) => idbSet(STORE_LAMPIRAN_FOTO_HARIAN, key, fotos)
+  .catch((err) => console.error('[localDb] Gagal menyimpan lampiran foto laporan harian:', err));
+export const loadLampiranFotoHarian = (key) => idbGet(STORE_LAMPIRAN_FOTO_HARIAN, key)
+  .catch((err) => { console.error('[localDb] Gagal memuat lampiran foto laporan harian:', err); return null; });
+export const clearLampiranFotoHarian = (key) => idbDelete(STORE_LAMPIRAN_FOTO_HARIAN, key)
+  .catch((err) => console.error('[localDb] Gagal menghapus lampiran foto laporan harian:', err));

@@ -39,16 +39,6 @@ export default function UserCetakLaporanHarian({ employees, attendance, statusLo
   const dlList = grouped['Dinas Luar'].sort((a, b) => a.nama.localeCompare(b.nama));
   const alpaList = grouped.Alpa.sort((a, b) => a.nama.localeCompare(b.nama));
 
-  const listTidakHadir = [
-    ...grouped.Alpa.map(e => ({ ...e, status: 'Alpa (Tanpa Ket.)' })),
-    ...grouped['Dinas Luar'].map(e => ({ ...e, status: 'Dinas Luar' })),
-    ...grouped.Izin.map(e => ({ ...e, status: 'Izin' })),
-    ...grouped.Sakit.map(e => ({ ...e, status: 'Sakit' })),
-    ...grouped.Cuti.map(e => ({ ...e, status: 'Cuti' })),
-  ];
-  const statusPriority = { 'Alpa (Tanpa Ket.)': 1, 'Dinas Luar': 2, 'Izin': 3, 'Sakit': 4, 'Cuti': 5 };
-  listTidakHadir.sort((a, b) => (statusPriority[a.status] || 99) - (statusPriority[b.status] || 99));
-
   return (
     <div className="min-h-full bg-slate-50 pb-20 print:pb-0">
       <MobileHeader title="Laporan Harian" onBack={() => navigate('/')} />
@@ -128,7 +118,6 @@ export default function UserCetakLaporanHarian({ employees, attendance, statusLo
               cutiList={cutiList}
               dlList={dlList}
               alpaList={alpaList}
-              listTidakHadir={listTidakHadir}
             />
           </div>
         </PinchZoomView>
