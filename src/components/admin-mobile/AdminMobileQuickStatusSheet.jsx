@@ -1,14 +1,11 @@
 import React, { useState } from 'react';
 import { X, CheckCircle2, FileText, Stethoscope, Palmtree, Briefcase } from 'lucide-react';
-import { doc, setDoc, addDoc, serverTimestamp } from 'firebase/firestore';
-import { getCollectionPath } from '../../lib/firebase';
+import { saveQuickStatus } from '../../lib/quickStatus';
 
 // Sheet aksi cepat: admin tap satu pegawai yang belum absen (Alpa) lalu pilih
-// status untuk hari itu. "Hadir" langsung membuat record attendance nyata
-// (adminInput:true, sama seperti pola absensi mandiri di UserAbsensi.jsx tapi
-// tanpa foto/GPS). Izin/Sakit/Cuti/Dinas Luar memakai mekanisme statusLocks
-// yang sama dengan AdminManajemenAbsensi.jsx, hanya untuk 1 hari (start=end).
-const ACTIONS = [
+// status untuk hari itu. Logika penyimpanannya ada di lib/quickStatus.js supaya
+// dipakai bersama versi web (AdminQuickStatusModal.jsx).
+export const QUICK_ACTIONS = [
   { key: 'Hadir', label: 'Hadir', icon: CheckCircle2, color: 'text-green-700 bg-green-50 border-green-200' },
   { key: 'Izin', label: 'Izin', icon: FileText, color: 'text-sky-700 bg-sky-50 border-sky-200' },
   { key: 'Sakit', label: 'Sakit', icon: Stethoscope, color: 'text-amber-700 bg-amber-50 border-amber-200' },
@@ -25,34 +22,7 @@ export default function AdminMobileQuickStatusSheet({ open, employee, date, sess
     if (!confirm(`Tandai "${employee.nama}" sebagai ${statusKey} untuk tanggal ${date}?`)) return;
     setSubmitting(true);
     try {
-      if (statusKey === 'Hadir') {
-        const docId = `${date}_${session}_${employee.id}`;
-        await setDoc(doc(getCollectionPath('attendance'), docId), {
-          userId: employee.id,
-          userName: employee.nama,
-          nama: employee.nama,
-          nip: employee.nip || '',
-          date,
-          session,
-          status: 'Hadir',
-          statusApproval: 'approved',
-          adminInput: true,
-          timestamp: new Date().toISOString(),
-          serverTimestamp: serverTimestamp(),
-          device: 'admin-mobile',
-          location: null,
-        });
-      } else {
-        await addDoc(getCollectionPath('statusLocks'), {
-          userId: employee.id,
-          userName: employee.nama,
-          nip: employee.nip || '',
-          status: statusKey,
-          startDate: date,
-          endDate: date,
-          createdAt: serverTimestamp(),
-        });
-      }
+      await saveQuickStatus({ employee, date, session, statusKey, device: 'admin-mobile' });
       onClose();
     } catch (err) {
       console.error('Gagal set status cepat:', err);
@@ -76,7 +46,7 @@ export default function AdminMobileQuickStatusSheet({ open, employee, date, sess
           </button>
         </div>
         <div className="px-4 pb-5 grid grid-cols-2 gap-2">
-          {ACTIONS.map((a) => (
+          {QUICK_ACTIONS.map((a) => (
             <button
               key={a.key}
               type="button"

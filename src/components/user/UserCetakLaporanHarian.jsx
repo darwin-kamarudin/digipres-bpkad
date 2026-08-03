@@ -50,18 +50,22 @@ export default function UserCetakLaporanHarian({ employees, attendance, statusLo
       <div className="p-4 space-y-4 font-sans print:p-0">
         {/* PANEL KONTROL */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-3 print:hidden">
-          <div className="grid grid-cols-2 gap-2">
+          {/* Filter sesi TIDAK dipakai pada Format Default (v1): dokumennya sudah
+              memuat kolom Apel Pagi & Apel Sore sekaligus (laporan harian utuh). */}
+          <div className={printTemplate === 'v1' ? '' : 'grid grid-cols-2 gap-2'}>
             <div>
               <label className="block text-[11px] font-bold text-slate-500 mb-1">Tanggal</label>
               <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full p-2.5 border border-slate-200 rounded-xl outline-none text-sm" />
             </div>
-            <div>
-              <label className="block text-[11px] font-bold text-slate-500 mb-1">Sesi</label>
-              <select value={session} onChange={(e) => setSession(e.target.value)} className="w-full p-2.5 border border-slate-200 rounded-xl outline-none text-sm">
-                <option>Pagi</option>
-                <option>Sore</option>
-              </select>
-            </div>
+            {printTemplate !== 'v1' && (
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 mb-1">Sesi</label>
+                <select value={session} onChange={(e) => setSession(e.target.value)} className="w-full p-2.5 border border-slate-200 rounded-xl outline-none text-sm">
+                  <option>Pagi</option>
+                  <option>Sore</option>
+                </select>
+              </div>
+            )}
           </div>
 
           <button

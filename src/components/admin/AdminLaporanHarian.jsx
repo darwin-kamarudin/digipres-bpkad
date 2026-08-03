@@ -21,7 +21,7 @@ export default function AdminLaporanHarian({ employees, attendance, statusLocks 
   const [showSignature, setShowSignature] = useState(true);
   const [showLampiranFoto, setShowLampiranFoto] = useState(false);
   const fotoInputRef = useRef(null);
-  const { lampiranFotos, handleFotoChange, clearFotos } = useLampiranFotoHarian(date, session);
+  const { lampiranFotos, handleFotoChange, clearFotos } = useLampiranFotoHarian(date);
 
   // --- HARI LIBUR / WEEKEND ---
   const holidayData = holidays.find((h) => h.date === date);
@@ -49,13 +49,17 @@ export default function AdminLaporanHarian({ employees, attendance, statusLocks 
           <label className="text-xs font-bold block mb-1">Tanggal</label>
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="border p-2 rounded" />
         </div>
-        <div>
-          <label className="text-xs font-bold block mb-1">Sesi</label>
-          <select value={session} onChange={(e) => setSession(e.target.value)} className="border p-2 rounded w-32">
-            <option>Pagi</option>
-            <option>Sore</option>
-          </select>
-        </div>
+        {/* Filter sesi TIDAK dipakai pada Format Default (v1): dokumennya sudah
+            memuat kolom Apel Pagi & Apel Sore sekaligus (laporan harian utuh). */}
+        {printTemplate !== 'v1' && (
+          <div>
+            <label className="text-xs font-bold block mb-1">Sesi</label>
+            <select value={session} onChange={(e) => setSession(e.target.value)} className="border p-2 rounded w-32">
+              <option>Pagi</option>
+              <option>Sore</option>
+            </select>
+          </div>
+        )}
 
         {!isUserView && (
           <div className="flex gap-4">

@@ -4,11 +4,13 @@ import { saveLampiranFotoHarian, loadLampiranFotoHarian, clearLampiranFotoHarian
 // Kelola state + persistensi IndexedDB lokal untuk Lampiran Foto Laporan
 // Harian (Format Default) — dipakai BERSAMA oleh versi web (AdminLaporanHarian),
 // admin-mobile, maupun panel pegawai supaya logikanya konsisten & tidak perlu
-// diduplikasi di tiap versi. Foto dikunci per tanggal+sesi laporan dan TIDAK
-// pernah dikirim ke Firebase (lihat catatan di lib/localDb.js).
-export default function useLampiranFotoHarian(date, session) {
+// diduplikasi di tiap versi. Foto dikunci PER TANGGAL saja (bukan per sesi
+// lagi) — dokumen Format Default kini memuat apel pagi & sore sekaligus, jadi
+// lampiran fotonya pun satu set untuk satu hari. Foto TIDAK pernah dikirim ke
+// Firebase (lihat catatan di lib/localDb.js).
+export default function useLampiranFotoHarian(date) {
   const [lampiranFotos, setLampiranFotos] = useState([]);
-  const key = `${date}_${session}`;
+  const key = date;
 
   useEffect(() => {
     let active = true;

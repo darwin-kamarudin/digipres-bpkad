@@ -40,8 +40,13 @@ export default function LaporanHarianDocument({
     </div>
   );
 
+  // w-fit + min-w-full pada pembungkus dokumen: kalau tabel daftar hadir (kolom
+  // autofit, nama/jabatan tidak dipotong) lebih lebar dari layar — sering
+  // terjadi di tampilan mobile — latar putih dokumen IKUT melebar mengikuti
+  // tabel, bukan terpotong di lebar layar. Kop surat & tabel rekapitulasi
+  // memakai w-full sehingga otomatis sejajar dengan lebar akhir tersebut.
   return (
-    <div className="bg-white p-10 rounded shadow-lg print:bg-white print:shadow-none print:rounded-none print:w-full print:p-0">
+    <div className="w-fit min-w-full bg-white p-10 rounded shadow-lg print:bg-white print:shadow-none print:rounded-none print:w-full print:p-0">
       {isAutoFitCase ? (
         <AutoFitA4Page>
           <LaporanHarianKopJudul settings={settings} date={date} session={session} variant="apel" />
@@ -78,7 +83,6 @@ export default function LaporanHarianDocument({
           <LaporanHarianFotoLampiran
             settings={settings}
             date={date}
-            session={session}
             showSignature={showSignature}
             lampiranFotos={lampiranFotos}
           />
