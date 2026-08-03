@@ -81,6 +81,111 @@ const monthRange = (month) => {
 // STATISTIK
 // ==========================================================================
 
+// Kelompok status kepegawaian resmi untuk rekap ASN (urut sesuai dokumen cetak).
+export const JENIS_ASN = ['PNS', 'PPPK', 'PPPK PW'];
+
+// Rekapitulasi Kehadiran ASN untuk SATU hari penuh — memakai format yang sama
+// dengan dokumen "Cetak Daftar Hadir Apel" (Jumlah ASN per jenis kepegawaian +
+// Hadir Apel Pagi/Sore + Sakit/Izin/Dinas Luar/Cuti/Tanpa Keterangan).
+//
+// Berbeda dengan getDailyStats() yang hanya melihat SATU sesi, rekap ini
+// menghitung KEDUA sesi sekaligus karena barisnya memang memisahkan apel pagi
+// dan apel sore. Aturan hitungnya:
+//   - Hadir Apel Pagi/Sore : jumlah pegawai berstatus Hadir pada sesi tsb.
+//   - Sakit/Izin/Cuti/DL   : pegawai dihitung SEKALI untuk hari itu bila status
+//                            tersebut muncul di sesi mana pun (prioritas urut
+//                            Sakit > Izin > Cuti > Dinas Luar), supaya seorang
+//                            pegawai tidak terhitung ganda.
+//   - Tanpa Keterangan     : pegawai yang Alpa di KEDUA sesi.
+export const getApelRecapStats = (date, employees, attendance, statusLocks = [], holidays = []) => {
+  const pegawaiOnly = employees.filter(e => e.role === 'user');
+
+  const jumlahAsn = {};
+  JENIS_ASN.forEach(j => { jumlahAsn[j] = 0; });
+  let jumlahLainnya = 0;
+  pegawaiOnly.forEach(e => {
+    const key = e.statusPegawai || 'PNS';
+    if (JENIS_ASN.includes(key)) jumlahAsn[key] += 1;
+    else jumlahLainnya += 1;
+  });
+
+  const pagi = getDailyStats(date, 'Pagi', employees, attendance, statusLocks, holidays);
+  const sore = getDailyStats(date, 'Sore', employees, attendance, statusLocks, holidays);
+
+  const idsOf = (stats, bucket) => new Set(stats.grouped[bucket].map(e => e.id));
+  const union = (bucket) => new Set([...idsOf(pagi, bucket), ...idsOf(sore, bucket)]);
+
+  // Prioritas supaya satu pegawai hanya masuk satu bucket ketidakhadiran
+  const sakitIds = union('Sakit');
+  const izinIds = new Set([...union('Izin')].filter(id => !sakitIds.has(id)));
+  const cutiIds = new Set([...union('Cuti')].filter(id => !sakitIds.has(id) && !izinIds.has(id)));
+  const dlIds = new Set([...union('Dinas Luar')].filter(id => !sakitIds.has(id) && !izinIds.has(id) && !cutiIds.has(id)));
+
+  const alpaPagi = idsOf(pagi, 'Alpa');
+  const alpaSore = idsOf(sore, 'Alpa');
+  const tkIds = [...alpaPagi].filter(id => alpaSore.has(id));
+
+  return {
+    jumlahAsn,
+    jumlahLainnya,
+    totalPegawai: pegawaiOnly.length,
+    hadirPagi: pagi.grouped.Hadir.length,
+    hadirSore: sore.grouped.Hadir.length,
+    sakit: sakitIds.size,
+    izin: izinIds.size,
+    dl: dlIds.size,
+    cuti: cutiIds.size,
+    tk: tkIds.length,
+  };
+};
+
+// Kode keterangan pada dokumen daftar hadir apel
+const KODE_STATUS = {
+  Sakit: 'S',
+  Izin: 'I',
+  Cuti: 'C',
+  'Dinas Luar': 'DL',
+  Alpa: 'TK',
+};
+
+// Baris pegawai untuk dokumen Laporan Harian "Format Default" (v1) yang memakai
+// tata letak Daftar Hadir Apel: satu baris per pegawai, berisi status presensi
+// apel PAGI dan SORE beserta sumber pencatatannya.
+//   - "Mandiri" : pegawai melakukan absensi sendiri lewat aplikasi
+//   - "Admin"   : ditandai admin (adminInput pada attendance, atau kunci status)
+export const getApelSheetRows = (date, employees, attendance, statusLocks = [], holidays = []) => {
+  const pegawaiOnly = employees
+    .filter(e => e.role === 'user')
+    .sort((a, b) => (parseInt(a.no) || 99999) - (parseInt(b.no) || 99999));
+
+  const nonEffective = isNonEffectiveDate(date, holidays).isNonEffective;
+  const merged = nonEffective ? [] : mergeAttendanceWithLocks(attendance, statusLocks, date, date, holidays);
+  const logs = merged.filter(l => l.date === date && l.statusApproval === 'approved');
+
+  const cellOf = (log) => {
+    if (!log) return { status: 'Alpa', source: '', time: '' };
+    const source = (log.fromLock || log.adminInput) ? 'Admin' : 'Mandiri';
+    const time = (!log.fromLock && log.timestamp)
+      ? new Date(log.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+      : '';
+    return { status: log.status, source, time };
+  };
+
+  return pegawaiOnly.map((emp) => {
+    const pagi = cellOf(logs.find(l => l.userId === emp.id && l.session === 'Pagi'));
+    const sore = cellOf(logs.find(l => l.userId === emp.id && l.session === 'Sore'));
+
+    // Kolom "Ket." diisi kode ketidakhadiran hari itu (kalau ada). Hadir di
+    // salah satu sesi saja TIDAK dianggap TK — TK hanya bila kedua sesi kosong.
+    let ket = '';
+    const nonHadir = [pagi.status, sore.status].find(s => s !== 'Hadir' && s !== 'Alpa');
+    if (nonHadir) ket = KODE_STATUS[nonHadir] || '';
+    else if (pagi.status === 'Alpa' && sore.status === 'Alpa') ket = KODE_STATUS.Alpa;
+
+    return { emp, pagi, sore, ket };
+  });
+};
+
 // Fungsi untuk Menghitung Statistik Harian (Dashboard & Laporan Harian)
 export const getDailyStats = (date, session, employees, attendance, statusLocks = [], holidays = []) => {
     // 2. Ambil hanya pegawai dengan role 'user'

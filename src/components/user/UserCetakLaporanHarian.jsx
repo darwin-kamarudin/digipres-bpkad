@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Printer, ChevronDown } from 'lucide-react';
 import { getTodayString, formatDateIndo } from '../../utils/helpers';
-import { getDailyStats } from '../../utils/statistics';
+import { getDailyStats, getApelRecapStats, getApelSheetRows } from '../../utils/statistics';
 import LaporanHarianDocument from '../admin/LaporanHarianDocument';
 import MobileHeader from './MobileHeader';
 import UserCetakBottomNav from './UserCetakBottomNav';
@@ -38,6 +38,10 @@ export default function UserCetakLaporanHarian({ employees, attendance, statusLo
   const cutiList = grouped.Cuti.sort((a, b) => a.nama.localeCompare(b.nama));
   const dlList = grouped['Dinas Luar'].sort((a, b) => a.nama.localeCompare(b.nama));
   const alpaList = grouped.Alpa.sort((a, b) => a.nama.localeCompare(b.nama));
+
+  // Rekap ASN (format Daftar Hadir Apel) — menghitung kedua sesi sekaligus
+  const apelRecap = getApelRecapStats(date, employees, attendance, statusLocks, holidays);
+  const apelRows = getApelSheetRows(date, employees, attendance, statusLocks, holidays);
 
   return (
     <div className="min-h-full bg-slate-50 pb-20 print:pb-0">
@@ -112,6 +116,8 @@ export default function UserCetakLaporanHarian({ employees, attendance, statusLo
               printTemplate={printTemplate}
               showSignature={showSignature}
               counts={counts}
+              apelRecap={apelRecap}
+              apelRows={apelRows}
               hadirList={hadirList}
               sakitList={sakitList}
               izinList={izinList}

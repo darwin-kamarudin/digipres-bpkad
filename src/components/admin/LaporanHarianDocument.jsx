@@ -21,9 +21,9 @@ import AutoFitA4Page from './AutoFitA4Page';
 // tampil skala asli tanpa ikut disusutkan oleh perhitungan autofit halaman 1.
 export default function LaporanHarianDocument({
   settings, date, session, isNonEffective, holidayData,
-  printTemplate, showSignature, counts,
+  printTemplate, showSignature, counts, apelRecap, apelRows = [],
   hadirList, sakitList, izinList, cutiList, dlList, alpaList,
-  showLampiranDetail = false, showLampiranFoto = false, lampiranFotos = [],
+  showLampiranFoto = false, lampiranFotos = [],
 }) {
   const isAutoFitCase = printTemplate === 'v1' && !isNonEffective;
 
@@ -44,19 +44,13 @@ export default function LaporanHarianDocument({
     <div className="bg-white p-10 rounded shadow-lg print:bg-white print:shadow-none print:rounded-none print:w-full print:p-0">
       {isAutoFitCase ? (
         <AutoFitA4Page>
-          <LaporanHarianKopJudul settings={settings} date={date} session={session} />
+          <LaporanHarianKopJudul settings={settings} date={date} session={session} variant="apel" />
           <LaporanHarianV1
             settings={settings}
             date={date}
-            counts={counts}
-            hadirList={hadirList}
-            sakitList={sakitList}
-            izinList={izinList}
-            cutiList={cutiList}
-            dlList={dlList}
-            alpaList={alpaList}
+            apelRecap={apelRecap}
+            apelRows={apelRows}
             showSignature={showSignature}
-            showLampiranDetail={showLampiranDetail}
           />
         </AutoFitA4Page>
       ) : (

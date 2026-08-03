@@ -25,12 +25,12 @@ const A4_WIDTH_MM = 210;
 // manfaat nyata. printDocumentNode (native) TIDAK punya dialog cetak
 // interaktif seperti itu, makanya autofit paksa ini penting justru di sana.
 //
-// KENAPA LEBAR JUGA DISUSUTKAN (bukan cuma tinggi): Lampiran Detail sengaja
-// TIDAK memotong/meng-ellipsis nama pegawai yang panjang (lihat
-// ThreeColumnNameList di LaporanHarianV1.jsx) — kalau nama panjang, tabel itu
-// boleh melebar secara alami (table-layout auto). Elemen lain (kop surat,
+// KENAPA LEBAR JUGA DISUSUTKAN (bukan cuma tinggi): tabel daftar hadir di
+// LaporanHarianV1.jsx sengaja TIDAK memotong/meng-ellipsis nama & jabatan
+// pegawai yang panjang (kolomnya autofit, whitespace-nowrap) — kalau isinya
+// panjang, tabel itu boleh melebar secara alami. Elemen lain (kop surat,
 // tabel rekapan) memakai w-full sehingga OTOMATIS ikut lebar akhir yang
-// ditentukan Lampiran Detail sebagai elemen terlebar (`width: 'fit-content'`
+// ditentukan tabel terlebar itu (`width: 'fit-content'`
 // di sini membuat pembungkus ini menciut/melebar mengikuti anak-anaknya).
 // Supaya hasil akhirnya tetap 100% muat di kertas A4 walau lebar aslinya jadi
 // lebih besar dari 210mm, scale dihitung dari YANG PALING KECIL antara

@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Printer } from 'lucide-react';
 import { getTodayString } from '../../utils/helpers';
-import { getDailyStats } from '../../utils/statistics';
+import { getDailyStats, getApelRecapStats, getApelSheetRows } from '../../utils/statistics';
 import useLampiranFotoHarian from '../../hooks/useLampiranFotoHarian';
 import LampiranOptionsPanel from './LampiranOptionsPanel';
 import LaporanHarianDocument from './LaporanHarianDocument';
@@ -19,7 +19,6 @@ export default function AdminLaporanHarian({ employees, attendance, statusLocks 
   // --- OPSI CETAK (hanya relevan untuk admin, disembunyikan di isUserView) ---
   const [printTemplate, setPrintTemplate] = useState('v2');
   const [showSignature, setShowSignature] = useState(true);
-  const [showLampiranDetail, setShowLampiranDetail] = useState(false);
   const [showLampiranFoto, setShowLampiranFoto] = useState(false);
   const fotoInputRef = useRef(null);
   const { lampiranFotos, handleFotoChange, clearFotos } = useLampiranFotoHarian(date, session);
@@ -37,6 +36,11 @@ export default function AdminLaporanHarian({ employees, attendance, statusLocks 
   const cutiList = grouped.Cuti.sort((a, b) => a.nama.localeCompare(b.nama));
   const dlList = grouped['Dinas Luar'].sort((a, b) => a.nama.localeCompare(b.nama));
   const alpaList = grouped.Alpa.sort((a, b) => a.nama.localeCompare(b.nama));
+
+  // Rekap ASN (format Daftar Hadir Apel) — dihitung dari KEDUA sesi, bukan
+  // hanya sesi yang sedang dipilih, karena barisnya memisahkan apel pagi & sore.
+  const apelRecap = getApelRecapStats(date, employees, attendance, statusLocks, holidays);
+  const apelRows = getApelSheetRows(date, employees, attendance, statusLocks, holidays);
 
   return (
     <div className="space-y-6">
@@ -77,8 +81,6 @@ export default function AdminLaporanHarian({ employees, attendance, statusLocks 
 
             {printTemplate === 'v1' && (
               <LampiranOptionsPanel
-                showLampiranDetail={showLampiranDetail}
-                onToggleLampiranDetail={setShowLampiranDetail}
                 showLampiranFoto={showLampiranFoto}
                 onToggleLampiranFoto={setShowLampiranFoto}
                 lampiranFotos={lampiranFotos}
@@ -104,13 +106,14 @@ export default function AdminLaporanHarian({ employees, attendance, statusLocks 
         printTemplate={printTemplate}
         showSignature={showSignature}
         counts={counts}
+        apelRecap={apelRecap}
+        apelRows={apelRows}
         hadirList={hadirList}
         sakitList={sakitList}
         izinList={izinList}
         cutiList={cutiList}
         dlList={dlList}
         alpaList={alpaList}
-        showLampiranDetail={printTemplate === 'v1' && showLampiranDetail}
         showLampiranFoto={printTemplate === 'v1' && showLampiranFoto}
         lampiranFotos={lampiranFotos}
       />

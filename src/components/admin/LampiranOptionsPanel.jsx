@@ -1,26 +1,20 @@
 import React from 'react';
 import { ImagePlus, Trash2 } from 'lucide-react';
 
-// Checkbox "Lampiran Detail"/"Lampiran Foto" + tombol pilih foto dokumentasi
-// untuk Laporan Harian "Format Default" (v1). Diekstrak dari AdminLaporanHarian.jsx
-// supaya bisa dipakai ulang persis sama di versi admin-mobile & panel pegawai.
+// Checkbox "Lampiran Foto" + tombol pilih foto dokumentasi untuk Laporan Harian
+// "Format Default" (v1). Diekstrak dari AdminLaporanHarian.jsx supaya bisa
+// dipakai ulang persis sama di versi admin-mobile & panel pegawai.
+//
+// CATATAN: opsi "Lampirkan Detail" DIHAPUS sejak v1 memakai tata letak Daftar
+// Hadir Apel — daftar nama pegawai beserta status presensinya sudah tercetak
+// langsung di tabel utama, jadi lampiran rincian nama tidak diperlukan lagi.
 export default function LampiranOptionsPanel({
-  showLampiranDetail, onToggleLampiranDetail,
   showLampiranFoto, onToggleLampiranFoto,
   lampiranFotos, onPickFoto, onClearFoto, fotoInputRef,
 }) {
   return (
     <>
       <div className="flex flex-col justify-end pb-2 gap-1.5">
-        <label className="flex items-center space-x-2 cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={showLampiranDetail}
-            onChange={(e) => onToggleLampiranDetail(e.target.checked)}
-            className="w-5 h-5 text-red-700 rounded border-gray-300 focus:ring-red-600"
-          />
-          <span className="text-sm font-bold text-slate-700">Lampirkan Detail</span>
-        </label>
         <label className="flex items-center space-x-2 cursor-pointer select-none">
           <input
             type="checkbox"
