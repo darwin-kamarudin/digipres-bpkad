@@ -12,6 +12,7 @@ const AdminRekapanBulanan = lazy(() => import('../admin/AdminRekapanBulanan'));
 const AdminDataPegawai = lazy(() => import('../admin/AdminDataPegawai'));
 const AdminSettings = lazy(() => import('../admin/AdminSettings'));
 const AdminCetakAbsensiManual = lazy(() => import('../admin/AdminCetakAbsensiManual'));
+const AdminCetakAbsensiApel = lazy(() => import('../admin/AdminCetakAbsensiApel'));
 const AdminRekapanTahunan = lazy(() => import('../admin/AdminRekapanTahunan'));
 
 // === KOMPONEN ADMIN MOBILE-NATIVE (Capacitor), lazy-loaded juga ===
@@ -62,6 +63,7 @@ export default function AppRoutes({
                 <Route path="/laporan-bulanan" element={<AdminRekapanBulanan employees={employees} attendance={attendance} settings={settings} user={appUser} holidays={holidays} fetchAttendanceByRange={fetchAttendanceByRange} />} />
                 <Route path="/rekapan-tahunan" element={<AdminRekapanTahunan employees={employees} attendance={attendance} settings={settings} holidays={holidays} fetchAttendanceByRange={fetchAttendanceByRange} />} />
                 <Route path="/cetak-manual" element={<AdminCetakAbsensiManual employees={employees} settings={settings} holidays={holidays} />} />
+                <Route path="/cetak-manual-apel" element={<AdminCetakAbsensiApel employees={employees} settings={settings} />} />
                 <Route path="/data-pegawai" element={<AdminDataPegawai employees={employees} currentUser={appUser} />} />
                 <Route path="/settings" element={<AdminSettings settings={settings} holidays={holidays} employees={employees} user={appUser} />} />
             </>

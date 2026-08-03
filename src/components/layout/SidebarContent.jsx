@@ -32,6 +32,7 @@ const MENU_STRUCTURE = [
     color: 'text-slate-400',
     items: [
       { path: '/cetak-manual', label: 'Cetak Absensi Manual', icon: Printer },
+      { path: '/cetak-manual-apel', label: 'Cetak Daftar Hadir Apel', icon: Printer },
     ],
   },
   {

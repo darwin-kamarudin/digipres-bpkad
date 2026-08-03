@@ -160,6 +160,7 @@ export const HEADER_TITLES = {
   '/laporan-bulanan': 'Rekapan Bulanan',
   '/rekapan-tahunan': 'Rekapan Tahunan',
   '/cetak-manual': 'Cetak Manual',
+  '/cetak-manual-apel': 'Cetak Daftar Hadir Apel',
   '/data-pegawai': 'Data Pegawai',
   '/settings': 'Pengaturan',
   '/absensi-mandiri': 'Absensi Mandiri',
